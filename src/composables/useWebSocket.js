@@ -50,10 +50,8 @@ let currentReconnectInterval = CONFIG.reconnectInterval
 export function useWebSocket() {
   
   const getWebSocketUrl = () => {
-    const protocol = serverConfig.value.useSSL ? 'wss://' : 'ws://'
-    const host = serverConfig.value.host
-    const port = serverConfig.value.port
-    return `${protocol}${host}:${port}/api/ws/inversor`
+    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
+    return `${protocol}api.jamek.com.br/api/ws/inversor`
   }
 
   const addLog = (message, type = 'info') => {
