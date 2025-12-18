@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useWebSocket } from '@/composables/useWebSocket';
 import { useNavigation } from '@/composables/useNavigation';
 import { 
@@ -12,13 +12,17 @@ import {
   Play,
   Square,
   RotateCcw,
+  RotateCw,
   Settings,
-  TrendingUp
+  TrendingUp,
+  Sliders,
+  ArrowRightLeft
 } from 'lucide-vue-next';
 import DataCard from '@/components/ui/DataCard.vue';
 import ControlButton from '@/components/ui/ControlButton.vue';
 import StatusBadge from '@/components/equipment/StatusBadge.vue';
 import { useToast } from '@/composables/useToast';
+import { cn } from '@/lib/utils';
 
 const { 
   activeInverterId, 
@@ -34,20 +38,32 @@ const {
 const { navigateTo } = useNavigation();
 const { showToast } = useToast();
 
+// Local state for sliders to prevent jumping while dragging
+const localFreq = ref(0);
+const isDragging = ref(false);
+
 const inverter = computed(() => {
   const state = inverterStates[activeInverterId.value] || {};
   return {
     name: `Inversor ${String(activeInverterId.value).padStart(2, '0')}`,
-    status: isESP32Online.value ? (isRunning.value ? 'online' : 'offline') : 'offline', // Simplified mapping
+    status: isESP32Online.value ? (isRunning.value ? 'online' : 'offline') : 'offline', 
     running: isRunning.value,
     frequency: currentFreq.value || 0,
     setpoint: setpointFreq.value || 0,
     current: state.corrente || 0,
-    voltage: state.tensao || 220, // Default or mapped if available
-    power: (state.corrente || 0) * (state.tensao || 220) / 1000, // Estimate
-    temperature: state.temperatura || 45 // Default or mapped
+    voltage: state.tensao || 220, 
+    power: (state.corrente || 0) * (state.tensao || 220) / 1000, 
+    temperature: state.temperatura || 45,
+    direction: state.direcao || 'frente'
   };
 });
+
+// Sync local slider with remote setpoint when not dragging
+watch(() => inverter.value.setpoint, (newVal) => {
+  if (!isDragging.value) {
+    localFreq.value = newVal;
+  }
+}, { immediate: true });
 
 const handleStart = () => {
   sendCommand('start');
@@ -62,6 +78,17 @@ const handleStop = () => {
 const handleReset = () => {
   sendCommand('reset');
   showToast(`Reset de falha enviado para ${inverter.value.name}`, 'warning');
+};
+
+const handleDirection = () => {
+  sendCommand('direcao');
+  showToast(`Comando de inversão de rotação enviado`, 'info');
+};
+
+const handleFrequencyChange = (event) => {
+  const val = Number(event.target.value);
+  localFreq.value = val;
+  sendCommand('freq', val);
 };
 
 const emit = defineEmits(['open-config']);
@@ -91,6 +118,9 @@ const emit = defineEmits(['open-config']);
               <StatusBadge :status="inverter.status" size="md" />
               <span class="text-muted-foreground">
                 {{ inverter.running ? 'Em operação' : 'Parado' }}
+                <span v-if="inverter.running" class="ml-1 text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                  {{ inverter.direction === 'frente' ? 'Horário' : 'Anti-horário' }}
+                </span>
               </span>
             </div>
           </div>
@@ -170,6 +200,45 @@ const emit = defineEmits(['open-config']);
             />
           </div>
         </section>
+        
+        <!-- Frequency Control -->
+        <section class="bg-card border rounded-xl p-6">
+           <h2 class="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+            <Sliders class="w-5 h-5 text-primary" />
+            Ajuste de Velocidade
+          </h2>
+          
+          <div class="space-y-6">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-muted-foreground">Frequência Desejada</span>
+              <span class="text-2xl font-bold text-foreground">{{ localFreq }} <span class="text-sm text-muted-foreground font-normal">Hz</span></span>
+            </div>
+            
+            <div class="relative w-full h-12 flex items-center">
+              <input 
+                type="range" 
+                min="0" 
+                max="60" 
+                step="1"
+                v-model="localFreq"
+                @mousedown="isDragging = true"
+                @touchstart="isDragging = true"
+                @mouseup="isDragging = false"
+                @touchend="isDragging = false"
+                @change="handleFrequencyChange"
+                class="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+            </div>
+            
+            <div class="flex justify-between text-xs text-muted-foreground">
+              <span>0 Hz</span>
+              <span>15 Hz</span>
+              <span>30 Hz</span>
+              <span>45 Hz</span>
+              <span>60 Hz</span>
+            </div>
+          </div>
+        </section>
       </div>
 
       <!-- Controls -->
@@ -180,20 +249,31 @@ const emit = defineEmits(['open-config']);
             Controle Manual
           </h2>
           <div class="flex flex-col gap-3">
+            <div class="grid grid-cols-2 gap-3">
+              <ControlButton
+                label="Iniciar"
+                :icon="Play"
+                variant="start"
+                @click="handleStart"
+                :disabled="!isConnected"
+              />
+              <ControlButton
+                label="Parar"
+                :icon="Square"
+                variant="stop"
+                @click="handleStop"
+                :disabled="!isConnected"
+              />
+            </div>
+            
             <ControlButton
-              label="Iniciar"
-              :icon="Play"
-              variant="start"
-              @click="handleStart"
+              :label="inverter.direction === 'frente' ? 'Inverter (Horário)' : 'Inverter (Anti-Horário)'"
+              :icon="ArrowRightLeft"
+              variant="default"
+              @click="handleDirection"
               :disabled="!isConnected"
             />
-            <ControlButton
-              label="Parar"
-              :icon="Square"
-              variant="stop"
-              @click="handleStop"
-              :disabled="!isConnected"
-            />
+            
             <ControlButton
               label="Reset de Falha"
               :icon="RotateCcw"
@@ -201,6 +281,32 @@ const emit = defineEmits(['open-config']);
               @click="handleReset"
               :disabled="!isConnected"
             />
+          </div>
+        </section>
+
+        <!-- Status -->
+        <section class="bg-card border rounded-xl p-6">
+          <h2 class="text-lg font-semibold text-foreground mb-4">Status do Sistema</h2>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between py-2 border-b border-border">
+              <span class="text-muted-foreground">Estado</span>
+              <span class="font-medium text-foreground capitalize">{{ inverter.status }}</span>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-border">
+              <span class="text-muted-foreground">Modo</span>
+              <span class="font-medium text-foreground">Remoto (Node-RED)</span>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-border">
+              <span class="text-muted-foreground">Direção</span>
+              <span class="font-medium text-foreground capitalize">{{ inverter.direction }}</span>
+            </div>
+            <div class="flex items-center justify-between py-2">
+              <span class="text-muted-foreground">Conexão</span>
+              <span class="flex items-center gap-2 text-sm">
+                <span class="w-2 h-2 rounded-full" :class="isConnected ? 'bg-success' : 'bg-destructive'"></span>
+                {{ isConnected ? 'Conectado' : 'Desconectado' }}
+              </span>
+            </div>
           </div>
         </section>
       </div>
