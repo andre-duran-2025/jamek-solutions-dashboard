@@ -15,9 +15,9 @@
       "purpose": "any"
     },
     {
-      "src": "/pwa-512x512.png",
+      "src": "/pwa-maskable-512x512.jpeg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any"
     },
     {
@@ -27,9 +27,9 @@
       "purpose": "maskable"
     },
     {
-      "src": "/pwa-maskable-512x512.png",
+      "src": "/pwa-maskable-512x512.jpeg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "maskable"
     }
   ]
