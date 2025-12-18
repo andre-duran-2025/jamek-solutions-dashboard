@@ -21,9 +21,9 @@ const { formattedUptime, direction, systemState, lastUpdate, stats } = useWebSoc
         <div 
           class="mini-stat-value"
           :class="{
-            highlight: systemState === 'Estável' || systemState === 'ESP32 Online',
-            error: systemState === 'ESP32 Offline',
-            warning: systemState === 'Transitório'
+            highlight: systemState.includes('Online') || systemState === 'Estável',
+            error: systemState.includes('Offline') || systemState.includes('Erro'),
+            warning: systemState === 'Transitório' || systemState === 'Aguardando...'
           }"
         >{{ systemState }}</div>
       </div>

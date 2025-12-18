@@ -17,13 +17,13 @@ const selectInverter = (id) => {
 const getStatus = (id) => {
   const state = inverterStates[id]
   if (!state) return 'offline'
-  if (!state.isESP32Online) return 'offline'
-  if (state.isRunning) return 'running'
+  if (!state.online) return 'offline'
+  if (state.rodando) return 'running'
   return 'stopped'
 }
 
 const getFreq = (id) => {
-  return inverterStates[id]?.currentFreq || 0
+  return inverterStates[id]?.frequencia || 0
 }
 </script>
 
