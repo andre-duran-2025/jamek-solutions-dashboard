@@ -1,0 +1,543 @@
+// ============================================
+// ESP32 v6.2 ESTÁVEL - COM WIFI MANAGER
+// Stack aumentado + WiFiManager + Botão Reset
+// ============================================
+
+#include <WiFi.h>
+#include <WiFiManager.h>  // https://github.com/tzapu/WiFiManager
+#include <PubSubClient.h>
+#include <ModbusMaster.h>
+
+/* ================== CONFIG ================== */
+
+#define TOTAL_INVERSORES 21
+const char* mqtt_server = "149.28.236.238";
+const int mqtt_port = 1883;
+const char* mqtt_client_id = "ESP32_v6";
+
+#define RXD2 16
+#define TXD2 17
+#define RE_DE 4
+#define LED 2
+#define RESET_WIFI_BTN 0  // Botão BOOT da placa (GPIO 0)
+
+#define MIN_FREQ 0
+#define MAX_FREQ 60
+
+/* ================== REGISTRADORES ================== */
+
+#define REG_STATUS 0x001C
+#define REG_FREQ_SAIDA 0x101F
+#define REG_FREQ_SETPOINT 0x2001
+#define REG_CMD 0x2000
+
+/* ================== OBJETOS ================== */
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+ModbusMaster node;
+WiFiManager wifiManager;
+
+/* ================== ESTRUTURA SIMPLIFICADA ================== */
+
+struct Inv {
+  uint8_t id;
+  bool online = false;
+  bool rodando = false;
+  bool reverso = false;
+  uint16_t freq = 0;
+  uint8_t erros = 0;
+};
+
+Inv inv[TOTAL_INVERSORES];
+
+/* ================== COMANDO SIMPLIFICADO ================== */
+
+struct Comando {
+  uint8_t inv_id;
+  uint8_t cmd_type;  // 0=start, 1=stop, 2=freq, 3=direcao
+  uint16_t value;
+};
+
+/* ================== QUEUES E SEMAPHORES ================== */
+
+QueueHandle_t cmdQueue;
+SemaphoreHandle_t modbusMutex;
+uint8_t lastModbusId = 0;
+
+/* ================== CONTROLE DO BOTÃO DE RESET ================== */
+
+unsigned long buttonPressStart = 0;
+unsigned long lastBlinkTime = 0;
+bool buttonPressed = false;
+bool resetInProgress = false;
+
+/* ================== RS485 ================== */
+
+void preTransmission() { digitalWrite(RE_DE, HIGH); }
+void postTransmission() { digitalWrite(RE_DE, LOW); }
+
+/* ================== MODBUS SEGURO ================== */
+
+uint16_t readReg(uint8_t id, uint16_t reg) {
+  if (xSemaphoreTake(modbusMutex, pdMS_TO_TICKS(200)) != pdTRUE) {
+    return 0xFFFF;
+  }
+  
+  if (id != lastModbusId) {
+    node.begin(id, Serial2);
+    node.timeOut(200); // Garante timeout curto ao trocar de ID
+    lastModbusId = id;
+  }
+  
+  uint8_t r = node.readHoldingRegisters(reg, 1);
+  uint16_t v = (r == node.ku8MBSuccess) ? node.getResponseBuffer(0) : 0xFFFF;
+  
+  xSemaphoreGive(modbusMutex);
+  return v;
+}
+
+bool writeReg(uint8_t id, uint16_t reg, uint16_t val) {
+  if (xSemaphoreTake(modbusMutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    return false;
+  }
+  
+  if (id != lastModbusId) {
+    node.begin(id, Serial2);
+    node.timeOut(200); // Garante timeout curto ao trocar de ID
+    lastModbusId = id;
+  }
+  
+  uint8_t r = node.writeSingleRegister(reg, val);
+  
+  xSemaphoreGive(modbusMutex);
+  return (r == node.ku8MBSuccess);
+}
+
+/* ================== PUBLISH SEGURO ================== */
+
+void pub(uint8_t id, const char* k, const char* v) {
+  if (!client.connected()) return;
+  
+  char t[48];
+  snprintf(t, sizeof(t), "inversor/%d/status/%s", id, k);
+  client.publish(t, v);
+}
+
+/* ================== EXECUÇÃO DE COMANDOS ================== */
+
+void executarComando(const Comando& cmd) {
+  uint8_t id = cmd.inv_id;
+  if (id < 1 || id > TOTAL_INVERSORES) return;
+  
+  Inv& i = inv[id - 1];
+  
+  Serial.printf("CMD: %d INV: %d\n", cmd.cmd_type, id);
+  
+  switch (cmd.cmd_type) {
+    case 0: // START
+      if (writeReg(id, REG_CMD, i.reverso ? 0x000A : 0x0006)) {
+        i.rodando = true;
+        pub(id, "rodando", "1");
+        Serial.println("OK");
+      }
+      break;
+      
+    case 1: // STOP
+      if (writeReg(id, REG_CMD, 0x0001)) {
+        i.rodando = false;
+        pub(id, "rodando", "0");
+        Serial.println("OK");
+      }
+      break;
+      
+    case 2: // FREQ
+      if (cmd.value >= MIN_FREQ && cmd.value <= MAX_FREQ) {
+        if (writeReg(id, REG_FREQ_SETPOINT, cmd.value * 10)) {
+          i.freq = cmd.value;
+          char buf[8];
+          snprintf(buf, sizeof(buf), "%d", cmd.value);
+          pub(id, "frequencia", buf);
+          Serial.println("OK");
+        }
+      }
+      break;
+      
+    case 3: // DIRECAO
+      i.reverso = !i.reverso;
+      pub(id, "direcao", i.reverso ? "reverso" : "frente");
+      if (i.rodando) {
+        writeReg(id, REG_CMD, i.reverso ? 0x000A : 0x0006);
+      }
+      Serial.println("OK");
+      break;
+  }
+}
+
+/* ================== TASK: MQTT (CORE 0) ================== */
+
+void mqttTask(void* param) {
+  Serial.println("MQTT Task iniciada");
+  
+  while(1) {
+    yield();
+    
+    if (!client.connected()) {
+      Serial.println("Reconectando MQTT...");
+      
+      if (client.connect(mqtt_client_id)) {
+        Serial.println("MQTT conectado");
+        client.subscribe("inversor/+/cmd/#");
+      } else {
+        Serial.printf("MQTT falhou: %d\n", client.state());
+        vTaskDelay(pdMS_TO_TICKS(5000));
+        continue;
+      }
+    }
+    
+    client.loop();
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+}
+
+/* ================== TASK: COMMAND (CORE 0) ================== */
+
+void cmdTask(void* param) {
+  Serial.println("Command Task iniciada");
+  
+  Comando cmd;
+  
+  while(1) {
+    yield();
+    
+    if (xQueueReceive(cmdQueue, &cmd, pdMS_TO_TICKS(100)) == pdTRUE) {
+      executarComando(cmd);
+    }
+  }
+}
+
+/* ================== TASK: POLLING (CORE 1) ================== */
+
+void pollTask(void* param) {
+  Serial.println("Poll Task iniciada");
+  
+  uint8_t idx = 0;
+  
+  while(1) {
+    yield();
+    
+    Inv& i = inv[idx];
+    
+    uint16_t st = readReg(i.id, REG_STATUS);
+    
+    if (st == 0xFFFF) {
+      if (++i.erros >= 5 && i.online) {
+        i.online = false;
+        pub(i.id, "online", "0");
+      }
+    } else {
+      if (!i.online) {
+        i.online = true;
+        pub(i.id, "online", "1");
+      }
+      i.erros = 0;
+      
+      bool run = (st > 0);
+      if (run != i.rodando) {
+        i.rodando = run;
+        pub(i.id, "rodando", run ? "1" : "0");
+      }
+      
+      // Freq a cada 5 inversores
+      if (idx % 5 == 0) {
+        uint16_t fr = readReg(i.id, REG_FREQ_SAIDA);
+        if (fr != 0xFFFF) {
+          uint16_t hz = fr / 10;
+          if (hz != i.freq) {
+            i.freq = hz;
+            char buf[8];
+            snprintf(buf, sizeof(buf), "%d", hz);
+            pub(i.id, "frequencia", buf);
+          }
+        }
+      }
+    }
+    
+    if (++idx >= TOTAL_INVERSORES) idx = 0;
+    
+    vTaskDelay(pdMS_TO_TICKS(50));
+  }
+}
+
+/* ================== MQTT CALLBACK ================== */
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  int id;
+  char cmd_str[16];
+  
+  if (sscanf(topic, "inversor/%d/cmd/%15s", &id, cmd_str) != 2) return;
+  if (id < 1 || id > TOTAL_INVERSORES) return;
+  
+  Comando cmd;
+  cmd.inv_id = id;
+  cmd.value = 0;
+  
+  if (strcmp(cmd_str, "start") == 0) {
+    cmd.cmd_type = 0;
+  }
+  else if (strcmp(cmd_str, "stop") == 0) {
+    cmd.cmd_type = 1;
+  }
+  else if (strcmp(cmd_str, "frequencia") == 0) {
+    cmd.cmd_type = 2;
+    
+    char val_buf[8];
+    uint8_t len = (length < 7) ? length : 7;
+    memcpy(val_buf, payload, len);
+    val_buf[len] = '\0';
+    cmd.value = atoi(val_buf);
+  }
+  else if (strcmp(cmd_str, "direcao") == 0) {
+    cmd.cmd_type = 3;
+  }
+  else {
+    return;
+  }
+  
+  // Tenta colocar na fila por 100ms antes de desistir (evita descarte imediato)
+  if (xQueueSend(cmdQueue, &cmd, pdMS_TO_TICKS(100)) != pdTRUE) {
+    Serial.println("ERRO: Fila de comandos cheia! Comando descartado.");
+  }
+}
+
+/* ================== WIFI MANAGER E RESET ================== */
+
+void checkResetButton() {
+  if (resetInProgress) return;  // Evita múltiplas verificações
+  
+  bool isPressed = (digitalRead(RESET_WIFI_BTN) == LOW);
+  
+  // Botão acabou de ser pressionado
+  if (isPressed && !buttonPressed) {
+    buttonPressed = true;
+    buttonPressStart = millis();
+    lastBlinkTime = 0;
+    Serial.println("\n🔘 Botão BOOT detectado!");
+    Serial.println("⏳ Mantenha pressionado por 3 segundos...");
+  }
+  
+  // Botão continua pressionado
+  if (isPressed && buttonPressed) {
+    unsigned long elapsed = millis() - buttonPressStart;
+    
+    // Feedback visual a cada 500ms
+    if (millis() - lastBlinkTime > 500) {
+      Serial.print(".");
+      digitalWrite(LED, !digitalRead(LED));
+      lastBlinkTime = millis();
+    }
+    
+    // Atingiu 3 segundos!
+    if (elapsed > 3000 && !resetInProgress) {
+      resetInProgress = true;
+      Serial.println("\n⚠️  RESETANDO CREDENCIAIS WIFI!");
+      
+      // Pisca LED rapidamente
+      for (int i = 0; i < 15; i++) {
+        digitalWrite(LED, HIGH);
+        delay(100);
+        digitalWrite(LED, LOW);
+        delay(100);
+      }
+      
+      // Reset WiFi
+      Serial.println("🗑️  Apagando credenciais...");
+      wifiManager.resetSettings();
+      Serial.println("✅ WiFi resetado! Reiniciando em 2s...");
+      delay(2000);
+      ESP.restart();
+    }
+  }
+  
+  // Botão foi solto
+  if (!isPressed && buttonPressed) {
+    unsigned long elapsed = millis() - buttonPressStart;
+    buttonPressed = false;
+    lastBlinkTime = 0;
+    
+    if (elapsed < 3000) {
+      Serial.println("\n⏱️  Botão solto antes de 3 segundos - Cancelado");
+    }
+    
+    // Restaura LED ao estado de WiFi
+    digitalWrite(LED, WiFi.status() == WL_CONNECTED ? HIGH : LOW);
+  }
+}
+
+void setupWiFi() {
+  Serial.println("\n╔════════════════════════════════════╗");
+  Serial.println("║     CONFIGURAÇÃO WIFI MANAGER      ║");
+  Serial.println("╚════════════════════════════════════╝");
+  
+  // Configurações do WiFiManager
+  wifiManager.setConfigPortalTimeout(180); // 3 minutos
+  wifiManager.setConnectTimeout(30);       // 30 segundos
+  wifiManager.setAPCallback([](WiFiManager *wm) {
+    Serial.println("\n📡 Portal de configuração ativo!");
+    Serial.println("═══════════════════════════════════");
+    Serial.println("SSID: ESP32-MULTI-INV");
+    Serial.println("Senha: 12345678");
+    Serial.print("IP: ");
+    Serial.println(WiFi.softAPIP());
+    Serial.println("═══════════════════════════════════");
+    Serial.println("Conecte-se a esta rede e acesse:");
+    Serial.println("http://192.168.4.1");
+    Serial.println("═══════════════════════════════════\n");
+  });
+  
+  // Tenta conectar ou abre portal de configuração
+  Serial.println("🔄 Tentando conectar ao WiFi...");
+  
+  if (!wifiManager.autoConnect("ESP32-MULTI-INV", "12345678")) {
+    Serial.println("❌ Falha ao conectar - Timeout!");
+    Serial.println("⚠️  Reiniciando em 3 segundos...");
+    delay(3000);
+    ESP.restart();
+  }
+  
+  // Conectado com sucesso
+  Serial.println("\n✅ WiFi conectado!");
+  Serial.println("═══════════════════════════════════");
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("RSSI: ");
+  Serial.print(WiFi.RSSI());
+  Serial.println(" dBm");
+  Serial.println("═══════════════════════════════════\n");
+}
+
+/* ================== SETUP ================== */
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  
+  Serial.println("\n╔════════════════════════════════════╗");
+  Serial.println("║   ESP32 v6.2 WIFI MANAGER          ║");
+  Serial.println("╚════════════════════════════════════╝");
+  
+  // Configura pinos ANTES de tudo
+  pinMode(RE_DE, OUTPUT);
+  digitalWrite(RE_DE, LOW);
+  pinMode(LED, OUTPUT);
+  digitalWrite(LED, LOW);
+  pinMode(RESET_WIFI_BTN, INPUT_PULLUP);  // Botão BOOT com pull-up
+  
+  // Aviso sobre reset
+  Serial.println("\n💡 DICA: Segure BOOT por 3s a qualquer");
+  Serial.println("   momento para resetar WiFi\n");
+  
+  Serial2.begin(9600, SERIAL_8N1, RXD2, TXD2);
+  
+  // CONFIGURAÇÃO CRÍTICA PARA EVITAR TRAVAMENTOS
+  // Timeout reduzido para 200ms (padrão é 2000ms)
+  // Se um inversor não responder em 200ms, pula para o próximo
+  node.begin(1, Serial2); 
+  node.timeOut(200); 
+  
+  node.preTransmission(preTransmission);
+  node.postTransmission(postTransmission);
+  
+  // Cria semaphore e queue
+  modbusMutex = xSemaphoreCreateMutex();
+  cmdQueue = xQueueCreate(10, sizeof(Comando));
+  
+  if (modbusMutex == NULL || cmdQueue == NULL) {
+    Serial.println("ERRO: Falha ao criar mutex/queue");
+    while(1) delay(1000);
+  }
+  
+  // Init inversores
+  for (uint8_t i = 0; i < TOTAL_INVERSORES; i++) {
+    inv[i].id = i + 1;
+  }
+  
+  setupWiFi();
+  
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(mqttCallback);
+  client.setKeepAlive(15);
+  client.setSocketTimeout(5);
+  client.setBufferSize(256);
+  
+  // Conecta MQTT inicial
+  Serial.print("MQTT conectando...");
+  if (client.connect(mqtt_client_id)) {
+    Serial.println("OK");
+    client.subscribe("inversor/+/cmd/#");
+  } else {
+    Serial.println("FAIL");
+  }
+  
+  Serial.println("\nCriando tasks...");
+  
+  BaseType_t r1 = xTaskCreatePinnedToCore(mqttTask, "MQTT", 8192, NULL, 2, NULL, 0);
+  BaseType_t r2 = xTaskCreatePinnedToCore(cmdTask, "CMD", 8192, NULL, 2, NULL, 0);
+  BaseType_t r3 = xTaskCreatePinnedToCore(pollTask, "Poll", 8192, NULL, 1, NULL, 1);
+  
+  if (r1 != pdPASS || r2 != pdPASS || r3 != pdPASS) {
+    Serial.println("ERRO: Falha ao criar tasks");
+    while(1) delay(1000);
+  }
+  
+  Serial.println("✅ Sistema iniciado!");
+  Serial.println("Heap livre: " + String(ESP.getFreeHeap()));
+  Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+}
+
+/* ================== LOOP ================== */
+
+void loop() {
+  // Verifica botão de reset a qualquer momento
+  static unsigned long lastCheck = 0;
+  if (millis() - lastCheck > 100) {  // Verifica a cada 100ms
+    lastCheck = millis();
+    checkResetButton();
+  }
+  
+  // LED indica WiFi (mas não interfere se botão estiver pressionado)
+  if (!buttonPressed) {
+    digitalWrite(LED, WiFi.status() == WL_CONNECTED ? HIGH : LOW);
+  }
+  
+  // Heartbeat
+  static unsigned long lastHB = 0;
+  if (millis() - lastHB > 30000) {
+    lastHB = millis();
+    
+    Serial.println("\n=== STATUS ===");
+    Serial.printf("Heap: %u bytes\n", ESP.getFreeHeap());
+    Serial.printf("WiFi: %s (RSSI: %d dBm)\n", 
+      WiFi.status() == WL_CONNECTED ? "OK" : "FAIL",
+      WiFi.RSSI());
+    Serial.printf("MQTT: %s\n", client.connected() ? "OK" : "FAIL");
+    
+    int on = 0;
+    for (uint8_t i = 0; i < TOTAL_INVERSORES; i++) {
+      if (inv[i].online) on++;
+    }
+    Serial.printf("Inversores online: %d/%d\n", on, TOTAL_INVERSORES);
+    Serial.println("==============\n");
+    
+    if (client.connected()) {
+      char buf[64];
+      snprintf(buf, sizeof(buf), "{\"up\":%lu,\"on\":%d,\"heap\":%u}", 
+        millis()/1000, on, ESP.getFreeHeap());
+      client.publish("inversor/gateway/heartbeat", buf);
+    }
+  }
+  
+  delay(1000);
+}
