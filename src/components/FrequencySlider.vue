@@ -5,23 +5,26 @@ import { useWebSocket } from '@/composables/useWebSocket'
 const { setpointFreq, sendCommand, isConnected } = useWebSocket()
 
 const localValue = ref(0)
+const isDragging = ref(false)
 let timer = null
 
-// Update local value when prop changes, but only if not dragging (handled by UI logic typically, 
-// but here we can just update if difference is significant or simply watch)
-// To avoid jumping while dragging, we might want to separate "display value" from "actual setpoint"
+// Update local value when prop changes, but only if not dragging
 watch(setpointFreq, (newVal) => {
-  // Only update if we're not actively dragging (simple heuristic: if we just sent a command, we know)
-  // For now, let's just update. The user experience might be slightly jumpy if bidirectional sync is fast.
-  // In the original code: 
-  // if (!document.getElementById("freqSlider").matches(':active')) { ... }
-  // We can try to replicate this behavior or just bind one-way with event.
-  
-  // Since we can't easily check :active state in reactive flow without refs to element,
-  // we will trust the v-model unless we want to implement the check.
-  // Let's implement a simple debounce for sending, but immediate update for receiving unless interaction.
-  localValue.value = newVal
+  if (!isDragging.value) {
+    localValue.value = newVal
+  }
 })
+
+const onDragStart = () => {
+  isDragging.value = true
+}
+
+const onDragEnd = () => {
+  isDragging.value = false
+  // Ensure final value is sent immediately on release
+  if (timer) clearTimeout(timer)
+  sendCommand("freq", localValue.value)
+}
 
 const onInput = (event) => {
   const val = Number(event.target.value)
@@ -29,12 +32,10 @@ const onInput = (event) => {
   
   if (timer) clearTimeout(timer)
   
+  // Debounce while dragging
   timer = setTimeout(() => {
-    if (sendCommand("freq", val)) {
-      // Log handled in composable or we can add specific log here if needed
-      // addLog(`Frequência: ${val} Hz`, "info") // The original code logged this
-    }
-  }, 800)
+    sendCommand("freq", val)
+  }, 300) // Reduced from 800ms to 300ms for better responsiveness
 }
 </script>
 
@@ -54,6 +55,10 @@ const onInput = (event) => {
         max="60" 
         v-model="localValue"
         @input="onInput"
+        @mousedown="onDragStart"
+        @mouseup="onDragEnd"
+        @touchstart="onDragStart"
+        @touchend="onDragEnd"
         :disabled="!isConnected"
       >
       <div class="slider-limits">

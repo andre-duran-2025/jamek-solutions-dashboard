@@ -475,9 +475,27 @@ export function useWebSocket() {
       return false
     }
     
-    const state = currentState.value
-    // Relax offline check since we might want to try sending anyway or the state is stale
+    const state = ensureInverterState(activeInverterId.value) // Ensure state exists
     
+    // Optimistic Update: Update UI immediately
+    if (cmd === 'start') {
+      state.isRunning = true
+      state.rodando = true
+      state.systemState = "Inversor Online"
+    } else if (cmd === 'stop') {
+      state.isRunning = false
+      state.rodando = false
+      state.systemState = "Inversor Parado"
+    } else if (cmd === 'direcao') {
+      const newDir = state.direcao === 'frente' ? 'tras' : 'frente'
+      state.direcao = newDir
+      state.direction = newDir === 'frente' ? 'Frente' : 'Reverso'
+    } else if (cmd === 'freq' && value !== null) {
+      state.setpointFreq = Number(value)
+      state.frequencia_setpoint = Number(value)
+      // We don't update currentFreq yet, waiting for feedback
+    }
+
     // Include ID in the message for backend routing
     // Node-RED expects 'inv', 'cmd', 'value'
     const message = {
@@ -491,6 +509,8 @@ export function useWebSocket() {
       return true
     } catch (error) {
       console.error("Erro ao enviar:", error)
+      // Revert optimistic update if needed? 
+      // For now, next heartbeat will fix it, or user tries again.
       return false
     }
   }
