@@ -362,9 +362,15 @@ export function useWebSocket() {
           state.corrente = Number(value)
         }
         else if (key === 'direcao') {
-          const dir = String(value).toLowerCase()
-          state.direction = dir === "frente" ? "Frente" : "Reverso"
-          state.direcao = dir
+          const v = String(value).toLowerCase()
+          // Handle various formats: 'frente'/'tras', '0'/'1', 'forward'/'reverse'
+          if (v === 'frente' || v === 'forward' || v === '0') {
+            state.direction = 'Frente'
+            state.direcao = 'frente'
+          } else {
+            state.direction = 'Reverso'
+            state.direcao = 'tras'
+          }
         }
         else {
           // Generic fallback for other fields

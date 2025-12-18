@@ -85,7 +85,14 @@ const handleDirection = () => {
   showToast(`Comando de inversão de rotação enviado`, 'info');
 };
 
+const handleSliderRelease = () => {
+  isDragging.value = false;
+  // Send command only when user releases the slider
+  sendCommand('freq', Number(localFreq.value));
+};
+
 const handleFrequencyChange = (event) => {
+  // Fallback for keyboard input or other changes not caught by mouseup
   const val = Number(event.target.value);
   localFreq.value = val;
   sendCommand('freq', val);
@@ -223,9 +230,8 @@ const emit = defineEmits(['open-config']);
                 v-model="localFreq"
                 @mousedown="isDragging = true"
                 @touchstart="isDragging = true"
-                @mouseup="isDragging = false"
-                @touchend="isDragging = false"
-                @change="handleFrequencyChange"
+                @mouseup="handleSliderRelease"
+                @touchend="handleSliderRelease"
                 class="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
               />
             </div>
