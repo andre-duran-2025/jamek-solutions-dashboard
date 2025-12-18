@@ -88,14 +88,44 @@ button {
 
 /* Button Variants */
 .btn-start {
-  background: var(--success-light);
+  background: rgba(34, 197, 94, 0.1);
   color: var(--success);
-  border-color: rgba(16, 185, 129, 0.2);
+  border: 1px solid var(--success);
 }
 
 .btn-start:hover:not(:disabled) {
   background: var(--success);
+  color: #000;
+  box-shadow: 0 0 12px var(--success-light);
+}
+
+.btn-stop {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.btn-stop:hover:not(:disabled) {
+  background: var(--danger);
   color: #fff;
+  box-shadow: 0 0 12px var(--danger-light);
+}
+
+.btn-dir {
+  background: var(--surface-hover);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+}
+
+.btn-dir:hover:not(:disabled) {
+  background: var(--surface-active);
+  border-color: var(--text-muted);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
 }
 
 .btn-stop {

@@ -1,31 +1,31 @@
 :root {
-  /* --- Palette (Slate Based) --- */
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --surface-hover: #334155;
-  --surface-active: #475569;
+  /* --- Palette (Medium Gray Theme) --- */
+  --bg: #52525b;         /* Zinc-600: Medium Gray Background */
+  --surface: #3f3f46;    /* Zinc-700: Darker Gray Surface for Cards */
+  --surface-hover: #52525b;
+  --surface-active: #27272a;
   
-  --border: #334155;
-  --border-light: #475569;
+  --border: #000000;     /* Pure Black Borders */
+  --border-light: #18181b;
 
   /* --- Brand Colors --- */
   --primary: #3b82f6;
   --primary-hover: #2563eb;
-  --primary-light: rgba(59, 130, 246, 0.1);
+  --primary-light: rgba(59, 130, 246, 0.2);
   
-  /* --- Status Colors --- */
-  --success: #10b981;
-  --success-light: rgba(16, 185, 129, 0.1);
-  --danger: #ef4444;
-  --danger-light: rgba(239, 68, 68, 0.1);
+  /* --- Status Colors (High Contrast) --- */
+  --success: #22c55e;    /* Green-500: Vibrant Green */
+  --success-light: rgba(34, 197, 94, 0.2);
+  --danger: #ef4444;     /* Red-500: Vibrant Red */
+  --danger-light: rgba(239, 68, 68, 0.2);
   --warning: #f59e0b;
-  --warning-light: rgba(245, 158, 11, 0.1);
+  --warning-light: rgba(245, 158, 11, 0.2);
   --info: #06b6d4;
   
   /* --- Typography --- */
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-main: #ffffff;  /* White for contrast on medium gray */
+  --text-muted: #d4d4d8; /* Zinc-300: Light Gray */
+  --text-dim: #a1a1aa;   /* Zinc-400 */
 
   /* --- Spacing (8-Point Grid) --- */
   --space-1: 0.25rem;  /* 4px */

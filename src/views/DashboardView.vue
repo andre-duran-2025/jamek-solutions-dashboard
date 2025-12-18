@@ -148,14 +148,26 @@ const getFreq = (id) => {
 .inverter-card.running .icon-box {
   color: var(--success);
   background: var(--success-light);
+  border: 1px solid var(--success);
 }
 
 .inverter-card.stopped .status-indicator {
-  background: var(--warning);
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 8px var(--danger-light);
+}
+
+.inverter-card.stopped .icon-box {
+  color: var(--danger);
+  background: var(--danger-light);
+  border: 1px solid var(--danger);
 }
 
 .inverter-card.offline .status-indicator {
-  background: var(--border);
+  background: var(--text-muted);
+}
+
+.inverter-card.offline .icon-box {
+  opacity: 0.5;
 }
 
 .card-body {

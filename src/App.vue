@@ -90,9 +90,9 @@ footer {
   padding: 12px 20px;
   text-align: center;
   font-size: 10px;
-  color: var(--muted);
+  color: var(--text-muted);
   border-top: 1px solid var(--border);
-  background: rgba(18, 26, 47, 0.8);
+  background: var(--surface);
   flex-shrink: 0;
   letter-spacing: 0.5px;
 }

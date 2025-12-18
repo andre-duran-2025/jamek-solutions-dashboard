@@ -65,10 +65,11 @@ const { isRunning, isESP32Online } = useWebSocket()
 }
 
 .status-indicator {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--danger);
+  border: 2px solid rgba(0,0,0,0.2);
   transition: var(--transition);
 }
 
@@ -88,6 +89,7 @@ const { isRunning, isESP32Online } = useWebSocket()
   letter-spacing: 0.05em;
   transition: var(--transition);
   font-family: 'Inter', monospace;
+  color: var(--danger); /* Default to Red (Parado) */
 }
 
 .status-text.on { 
@@ -96,6 +98,10 @@ const { isRunning, isESP32Online } = useWebSocket()
 
 .status-text.off { 
   color: var(--danger); 
+}
+
+.status-text.offline {
+  color: var(--text-muted);
 }
 
 .status-text.offline {

@@ -184,13 +184,14 @@ header {
   height: 8px;
   border-radius: 50%;
   background: var(--danger);
-  box-shadow: 0 0 0 2px var(--surface);
+  border: 1px solid rgba(0,0,0,0.2);
   transition: var(--transition);
 }
 
 .status-item.active .dot {
   background: var(--success);
-  box-shadow: 0 0 0 2px var(--surface), 0 0 8px var(--success-light);
+  box-shadow: 0 0 8px var(--success-light);
+  border-color: var(--success);
 }
 
 .label {
