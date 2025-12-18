@@ -2,9 +2,7 @@ const CACHE_NAME = 'jamek-dashboard-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
-  '/src/main.js',
-  '/src/style.css'
+  '/manifest.webmanifest'
 ];
 
 // Instalação do Service Worker

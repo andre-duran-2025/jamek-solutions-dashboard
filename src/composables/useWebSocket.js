@@ -102,10 +102,18 @@ let currentReconnectInterval = CONFIG.reconnectInterval
 export function useWebSocket() {
   
   const getWebSocketUrl = () => {
-    // Determine host: prefer config, fallback to window.location.host, default to 'painel.jamek.com.br'
+    // Determine host: prefer config, fallback to window.location.host
     let host = serverConfig.host
+    
+    // If config is missing or localhost (development default)
     if (!host || host === 'localhost') {
-       host = window.location.host || 'painel.jamek.com.br'
+       // If running on production dashboard, use production API
+       if (window.location.hostname === 'painel.jamek.com.br') {
+         host = 'api.jamek.com.br'
+       } else {
+         // Otherwise try current host (self-hosted) or default to api
+         host = window.location.host || 'api.jamek.com.br'
+       }
     }
     
     // Auto-detect protocol based on current page if not explicitly set, 
