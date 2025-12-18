@@ -1,5 +1,4 @@
 <script setup>
-import { SpeedInsights } from "@vercel/speed-insights/vue"
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useWebSocket } from '@/composables/useWebSocket'
 import Header from '@/components/Header.vue'
