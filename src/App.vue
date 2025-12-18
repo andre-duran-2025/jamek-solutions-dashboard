@@ -83,7 +83,12 @@ const handleBeforeUnload = () => {
 .main {
   flex: 1;
   padding: 24px;
-  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: 16px;
+  }
 }
 
 .grid {
