@@ -33,10 +33,11 @@ self.addEventListener('activate', (event) => {
 
 // Estratégia de Fetch: Cache First para assets, Network First para navegação
 self.addEventListener('fetch', (event) => {
-  // Ignorar requisições não-GET e chamadas de API/WebSocket
+  // Ignorar requisições não-GET, chamadas de API/WebSocket e esquemas não suportados (chrome-extension, etc)
   if (event.request.method !== 'GET' || 
       event.request.url.includes('/api/') || 
-      event.request.url.startsWith('ws')) {
+      event.request.url.startsWith('ws') ||
+      !event.request.url.startsWith('http')) {
     return;
   }
 
