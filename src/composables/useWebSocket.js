@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { useConfig } from './useConfig'
 import { useToast } from './useToast'
 
@@ -15,42 +15,97 @@ const CONFIG = {
   heartbeatMaxAge: 45000
 }
 
-// State
+// State Global
 const ws = ref(null)
 const isConnected = ref(false)
-const isESP32Online = ref(false)
-const isRunning = ref(false)
 const reconnectAttempts = ref(0)
 const logs = ref([])
 const alertMessage = ref('')
 const alertType = ref('error')
 const showAlertBanner = ref(false)
 
-// Data
-const currentFreq = ref(0)
-const setpointFreq = ref(0)
-const direction = ref('--')
-const uptime = ref(0)
-const stats = ref({
-  cmd: 0,
-  read: 0,
-  err: 0
+// Active Inverter Selection
+const activeInverterId = ref(1) // Default to 1
+
+// Per-Inverter State
+// Structure: { [id]: { isRunning, isESP32Online, currentFreq, ... } }
+const inverterStates = reactive({})
+
+// Initialize state for an inverter
+const ensureInverterState = (id) => {
+  if (!inverterStates[id]) {
+    inverterStates[id] = {
+      isRunning: false,
+      isESP32Online: false,
+      currentFreq: 0,
+      setpointFreq: 0,
+      direction: '--',
+      uptime: 0,
+      stats: { cmd: 0, read: 0, err: 0 },
+      lastUpdate: '--:--:--',
+      systemState: 'Aguardando...',
+      lastMessageTime: 0,
+      lastHeartbeatTime: 0
+    }
+  }
+  return inverterStates[id]
+}
+
+// Initialize for ID 1 by default
+ensureInverterState(1)
+
+// Computed helpers for the active inverter
+const currentState = computed(() => ensureInverterState(activeInverterId.value))
+
+const isRunning = computed({
+  get: () => currentState.value.isRunning,
+  set: (v) => currentState.value.isRunning = v
 })
-const lastUpdate = ref('--:--:--')
-const systemState = ref('Aguardando...')
+const isESP32Online = computed({
+  get: () => currentState.value.isESP32Online,
+  set: (v) => currentState.value.isESP32Online = v
+})
+const currentFreq = computed({
+  get: () => currentState.value.currentFreq,
+  set: (v) => currentState.value.currentFreq = v
+})
+const setpointFreq = computed({
+  get: () => currentState.value.setpointFreq,
+  set: (v) => currentState.value.setpointFreq = v
+})
+const direction = computed({
+  get: () => currentState.value.direction,
+  set: (v) => currentState.value.direction = v
+})
+const uptime = computed({
+  get: () => currentState.value.uptime,
+  set: (v) => currentState.value.uptime = v
+})
+const stats = computed(() => currentState.value.stats)
+const lastUpdate = computed({
+  get: () => currentState.value.lastUpdate,
+  set: (v) => currentState.value.lastUpdate = v
+})
+const systemState = computed({
+  get: () => currentState.value.systemState,
+  set: (v) => currentState.value.systemState = v
+})
 
 // Timers
 let reconnectTimer = null
 let pingTimer = null
 let watchdogTimer = null
-let lastMessageTime = 0
-let lastHeartbeatTime = 0
 let currentReconnectInterval = CONFIG.reconnectInterval
 
 export function useWebSocket() {
   
   const getWebSocketUrl = () => {
     return "wss://api.jamek.com.br/api/ws/inversor"
+  }
+
+  const setActiveInverter = (id) => {
+    activeInverterId.value = Number(id)
+    ensureInverterState(activeInverterId.value)
   }
 
   const addLog = (message, type = 'info') => {
@@ -88,9 +143,10 @@ export function useWebSocket() {
     showAlertBanner.value = false
   }
 
-  const updateLastUpdate = () => {
+  const updateLastUpdate = (id) => {
     const now = new Date()
-    lastUpdate.value = now.toLocaleTimeString('pt-BR', { 
+    const state = ensureInverterState(id)
+    state.lastUpdate = now.toLocaleTimeString('pt-BR', { 
       hour: '2-digit', 
       minute: '2-digit', 
       second: '2-digit' 
@@ -136,7 +192,9 @@ export function useWebSocket() {
   const startWatchdog = () => {
     stopWatchdog()
     watchdogTimer = setTimeout(() => {
-      const timeSince = Date.now() - lastMessageTime
+      // Check active inverter only for alerts
+      const activeState = currentState.value
+      const timeSince = Date.now() - activeState.lastMessageTime
       if (timeSince > CONFIG.watchdogTimeout) {
         console.warn("⚠️ Watchdog: Sem dados há muito tempo")
         addLog("Sem dados - verificando conexão", "warning")
@@ -157,72 +215,94 @@ export function useWebSocket() {
   }
 
   const handleMessage = (data) => {
-    updateLastUpdate()
+    // Extract ID from topic or default to 1
+    // Expected patterns:
+    // inversor/status/... -> ID 1
+    // inversor/5/status/... -> ID 5
     
-    if (data.topic === "server/heartbeat") {
-      lastHeartbeatTime = Date.now()
+    let id = 1
+    let topicPath = data.topic
+    
+    const parts = data.topic.split('/')
+    if (parts[0] === 'inversor' && !isNaN(parts[1])) {
+      id = Number(parts[1])
+      // Reconstruct topic path without ID to normalize handling
+      // inversor/5/status/rodando -> inversor/status/rodando
+      topicPath = `inversor/${parts.slice(2).join('/')}`
+    }
+
+    const state = ensureInverterState(id)
+    state.lastMessageTime = Date.now()
+    updateLastUpdate(id)
+    
+    if (topicPath === "server/heartbeat") {
+      state.lastHeartbeatTime = Date.now()
       return
     }
     
-    // console.log("📨", data.topic, "=", data.value)
-    
-    if (data.topic === "inversor/status/rodando") {
+    if (topicPath === "inversor/status/rodando") {
       const running = data.value == "1" || data.value == 1
-      if (running !== isRunning.value && isESP32Online.value) {
+      if (running !== state.isRunning && state.isESP32Online && id === activeInverterId.value) {
         addLog(running ? "Inversor LIGADO" : "Inversor DESLIGADO", "info")
       }
-      isRunning.value = running
+      state.isRunning = running
     }
     
-    if (data.topic === "inversor/status/frequencia") {
-      currentFreq.value = Number(data.value)
+    if (topicPath === "inversor/status/frequencia") {
+      state.currentFreq = Number(data.value)
     }
     
-    if (data.topic === "inversor/status/frequencia_setpoint") {
-      setpointFreq.value = Number(data.value)
+    if (topicPath === "inversor/status/frequencia_setpoint") {
+      state.setpointFreq = Number(data.value)
     }
     
-    if (data.topic === "inversor/status/uptime") {
-      uptime.value = Number(data.value)
+    if (topicPath === "inversor/status/uptime") {
+      state.uptime = Number(data.value)
     }
     
-    if (data.topic === "inversor/status/direcao") {
+    if (topicPath === "inversor/status/direcao") {
       const dir = String(data.value).toLowerCase()
-      direction.value = dir === "frente" ? "Frente" : "Reverso"
+      state.direction = dir === "frente" ? "Frente" : "Reverso"
     }
     
-    if (data.topic === "inversor/status/online") {
+    if (topicPath === "inversor/status/online") {
       const isOnline = data.value == "1" || data.value == 1
-      isESP32Online.value = isOnline
+      state.isESP32Online = isOnline
       
       if (!isOnline) {
-        isRunning.value = false
-        systemState.value = "ESP32 Offline"
-        showAlert("ESP32 OFFLINE", "error")
-        addLog("ESP32 OFFLINE", "error")
+        state.isRunning = false
+        state.systemState = "ESP32 Offline"
+        if (id === activeInverterId.value) {
+          showAlert("ESP32 OFFLINE", "error")
+          addLog("ESP32 OFFLINE", "error")
+        }
       } else {
-        systemState.value = "ESP32 Online"
-        hideAlert()
-        addLog("ESP32 ONLINE", "success")
+        state.systemState = "ESP32 Online"
+        if (id === activeInverterId.value) {
+          hideAlert()
+          addLog("ESP32 ONLINE", "success")
+        }
       }
     }
     
-    if (data.topic === "inversor/status/erro") {
-      showAlert(`Erro: ${data.value}`, "error")
-      addLog(`ERRO: ${data.value}`, "error")
-      stats.value.err++
+    if (topicPath === "inversor/status/erro") {
+      if (id === activeInverterId.value) {
+        showAlert(`Erro: ${data.value}`, "error")
+        addLog(`ERRO: ${data.value}`, "error")
+      }
+      state.stats.err++
     }
     
-    if (data.topic === "inversor/status/stats") {
+    if (topicPath === "inversor/status/stats") {
       try {
         const statsData = typeof data.value === 'string' ? JSON.parse(data.value) : data.value
         
-        if (statsData.cmd !== undefined) stats.value.cmd = statsData.cmd
-        if (statsData.read !== undefined) stats.value.read = statsData.read
-        if (statsData.err !== undefined) stats.value.err = statsData.err
+        if (statsData.cmd !== undefined) state.stats.cmd = statsData.cmd
+        if (statsData.read !== undefined) state.stats.read = statsData.read
+        if (statsData.err !== undefined) state.stats.err = statsData.err
         
-        if (isESP32Online.value) {
-          systemState.value = stats.value.read > 10 ? "Estável" : "Transitório"
+        if (state.isESP32Online) {
+          state.systemState = state.stats.read > 10 ? "Estável" : "Transitório"
         }
       } catch (e) {
         console.error("Erro ao processar stats:", e)
@@ -263,8 +343,9 @@ export function useWebSocket() {
         console.log("❌ WebSocket desconectado", event.code)
         ws.value = null
         isConnected.value = false
-        isESP32Online.value = false
-        isRunning.value = false
+        
+        // Mark all as offline? Or just global status
+        // We'll keep per-inverter state as is but maybe mark them as possibly stale?
         
         stopPingPong()
         stopWatchdog()
@@ -287,7 +368,6 @@ export function useWebSocket() {
       ws.value.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          lastMessageTime = Date.now()
           handleMessage(data)
           resetWatchdog()
         } catch (error) {
@@ -335,13 +415,19 @@ export function useWebSocket() {
       return false
     }
     
-    if (!isESP32Online.value && cmd !== 'ping') {
+    const state = currentState.value
+    if (!state.isESP32Online && cmd !== 'ping') {
       addLog("Erro: ESP32 offline", "error")
       showToast("ESP32 não está respondendo", "warning")
       return false
     }
     
-    const message = value !== null ? { cmd, value } : { cmd }
+    // Include ID in the message for backend routing
+    const message = {
+      cmd,
+      id: activeInverterId.value,
+      ...(value !== null ? { value } : {})
+    }
     
     try {
       ws.value.send(JSON.stringify(message))
@@ -354,8 +440,9 @@ export function useWebSocket() {
 
   // Heartbeat check interval
   setInterval(() => {
-    if (lastHeartbeatTime > 0) {
-      const age = Date.now() - lastHeartbeatTime
+    const state = currentState.value
+    if (state.lastHeartbeatTime > 0) {
+      const age = Date.now() - state.lastHeartbeatTime
       if (age > CONFIG.heartbeatMaxAge) {
         console.warn("⚠️ Heartbeat muito antigo")
         showAlert("ESP32 pode estar offline", "warning")
@@ -367,6 +454,9 @@ export function useWebSocket() {
     connect,
     disconnect,
     sendCommand,
+    setActiveInverter,
+    activeInverterId,
+    inverterStates,
     isConnected,
     isESP32Online,
     isRunning,
