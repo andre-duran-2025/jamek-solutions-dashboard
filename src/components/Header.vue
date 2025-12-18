@@ -12,7 +12,7 @@ const props = defineProps({
   }
 })
 
-const { isConnected, isESP32Online } = useWebSocket()
+const { isConnected, isGatewayOnline } = useWebSocket()
 const emit = defineEmits(['open-config', 'navigate'])
 </script>
 
@@ -47,7 +47,7 @@ const emit = defineEmits(['open-config', 'navigate'])
           <span class="dot"></span>
           <span class="label">Server</span>
         </div>
-        <div class="status-item" :class="{ active: isESP32Online }">
+        <div class="status-item" :class="{ active: isGatewayOnline }">
           <span class="dot"></span>
           <span class="label">ESP32</span>
         </div>

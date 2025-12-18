@@ -18,6 +18,7 @@ const CONFIG = {
 // State Global
 const ws = ref(null)
 const isConnected = ref(false)
+const isGatewayOnline = ref(false) // New global gateway status
 const reconnectAttempts = ref(0)
 const logs = ref([])
 const alertMessage = ref('')
@@ -275,6 +276,7 @@ export function useWebSocket() {
     if (data.tipo === 'gateway_status') {
       // Global system state
       const isOnline = data.online
+      isGatewayOnline.value = isOnline // Update global gateway status
       
       // Update active inverter system state
       const activeState = currentState.value
@@ -513,6 +515,7 @@ export function useWebSocket() {
     activeInverterId,
     inverterStates,
     isConnected,
+    isGatewayOnline,
     isESP32Online,
     isRunning,
     reconnectAttempts,
