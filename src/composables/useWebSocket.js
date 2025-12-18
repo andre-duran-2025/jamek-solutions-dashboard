@@ -388,9 +388,7 @@ export function useWebSocket() {
        }
        return
     }
-    
-    // Legacy support (keep existing checks if they don't conflict)
-    // 1. Handle Error Messages
+  }
 
   const connect = () => {
     if (ws.value && (ws.value.readyState === WebSocket.CONNECTING || ws.value.readyState === WebSocket.OPEN)) {
