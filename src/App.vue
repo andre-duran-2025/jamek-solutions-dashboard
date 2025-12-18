@@ -52,7 +52,6 @@ const navigateToDashboard = () => {
 </script>
 
 <template>
-  <SpeedInsights />
   <ToastContainer />
   <ConfigModal :isOpen="showConfig" @close="showConfig = false" />
   
