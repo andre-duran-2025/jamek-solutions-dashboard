@@ -71,82 +71,92 @@ const onInput = (event) => {
 
 <style scoped>
 .card {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
   border: 1px solid var(--border);
   position: relative;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .card:hover {
-  border-color: rgba(37, 99, 235, 0.3);
+  border-color: var(--primary-hover);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .card h3 {
-  margin: 0 0 12px 0;
-  font-size: 10px;
-  color: var(--muted);
+  margin: 0 0 var(--space-4) 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1.2px;
-  font-weight: 600;
+  letter-spacing: 0.05em;
+  font-weight: 700;
 }
 
 .slider {
-  padding: 8px 0;
+  padding: var(--space-2) 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4);
 }
 
 input[type="range"] {
   width: 100%;
-  height: 6px;
-  background: var(--border);
-  border-radius: 10px;
+  height: 8px; /* Increased for better visibility */
+  background: var(--surface-active);
+  border-radius: var(--radius-md);
   outline: none;
   -webkit-appearance: none;
   cursor: pointer;
 }
 
 input[type="range"]:disabled {
-  opacity: 0.4;
+  opacity: 0.5;
   cursor: not-allowed;
+  filter: grayscale(1);
 }
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 28px; /* Fitts's Law: Larger touch target */
+  height: 28px;
   border-radius: 50%;
   background: var(--primary);
   cursor: pointer;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-  transition: all 0.2s;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  transition: var(--transition);
+  margin-top: -10px; /* Center thumb on track (28 - 8) / 2 = 10 */
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8px;
+  background: var(--surface-active);
+  border-radius: var(--radius-md);
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.3);
+  transform: scale(1.1);
+  box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.3);
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--primary);
   cursor: pointer;
   border: none;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-  transition: all 0.2s;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  transition: var(--transition);
 }
 
 input[type="range"]::-moz-range-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.3);
+  transform: scale(1.1);
+  box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.3);
 }
 
 .slider-display {
@@ -156,23 +166,25 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 .slider-label {
-  font-size: 11px;
-  color: var(--muted);
+  font-size: 0.75rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 .slider-value {
-  font-size: 20px;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--primary);
+  font-family: 'Inter', monospace;
 }
 
 .slider-limits {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
-  color: var(--muted);
+  color: var(--text-dim);
+  font-size: 0.75rem;
   font-weight: 500;
 }
 </style>

@@ -30,46 +30,48 @@ watch(() => props.value, () => {
 
 <style scoped>
 .card {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
   border: 1px solid var(--border);
   position: relative;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .card:hover {
-  border-color: rgba(37, 99, 235, 0.3);
+  border-color: var(--primary-hover);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .card h3 {
-  margin: 0 0 12px 0;
-  font-size: 10px;
-  color: var(--muted);
+  margin: 0 0 var(--space-4) 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1.2px;
-  font-weight: 600;
+  letter-spacing: 0.05em;
+  font-weight: 700;
 }
 
 .freq-value {
   display: flex;
   justify-content: center;
   align-items: baseline;
-  gap: 6px;
-  padding: 12px 0 20px 0;
+  gap: var(--space-2);
+  padding: var(--space-2) 0 var(--space-5) 0;
   position: relative;
 }
 
 .freq-value strong {
-  font-size: 36px;
+  font-size: 2.5rem;
   font-weight: 700;
   background: linear-gradient(135deg, var(--primary), #60a5fa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   line-height: 1;
-  transition: all 0.3s;
+  transition: var(--transition);
+  font-family: 'Inter', monospace;
 }
 
 .freq-value.updating strong {
@@ -77,20 +79,20 @@ watch(() => props.value, () => {
 }
 
 .freq-value span {
-  font-size: 16px;
-  color: var(--muted);
+  font-size: 1rem;
+  color: var(--text-muted);
   font-weight: 500;
 }
 
 .freq-label {
   position: absolute;
-  bottom: 2px;
+  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 9px;
-  color: var(--muted);
+  font-size: 0.625rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 

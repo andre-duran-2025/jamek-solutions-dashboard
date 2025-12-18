@@ -31,27 +31,28 @@ const { isRunning, isESP32Online } = useWebSocket()
 
 <style scoped>
 .card {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
   border: 1px solid var(--border);
   position: relative;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .card:hover {
-  border-color: rgba(37, 99, 235, 0.3);
+  border-color: var(--primary-hover);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .card h3 {
-  margin: 0 0 12px 0;
-  font-size: 10px;
-  color: var(--muted);
+  margin: 0 0 var(--space-4) 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1.2px;
-  font-weight: 600;
+  letter-spacing: 0.05em;
+  font-weight: 700;
 }
 
 .status-display {
@@ -59,44 +60,45 @@ const { isRunning, isESP32Online } = useWebSocket()
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 12px 0;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
 }
 
 .status-indicator {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background: var(--red);
-  transition: all 0.3s;
+  background: var(--danger);
+  transition: var(--transition);
 }
 
 .status-indicator.on {
-  background: var(--green);
-  box-shadow: 0 0 12px var(--green);
+  background: var(--success);
+  box-shadow: 0 0 16px var(--success-light);
 }
 
 .status-indicator.offline {
-  background: var(--muted);
+  background: var(--text-muted);
   box-shadow: none;
 }
 
 .status-text {
-  font-size: 22px;
+  font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: 2px;
-  transition: all 0.3s;
+  letter-spacing: 0.05em;
+  transition: var(--transition);
+  font-family: 'Inter', monospace;
 }
 
 .status-text.on { 
-  color: var(--green); 
+  color: var(--success); 
 }
 
 .status-text.off { 
-  color: var(--red); 
+  color: var(--danger); 
 }
 
 .status-text.offline {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 </style>

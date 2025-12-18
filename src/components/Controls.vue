@@ -37,105 +37,97 @@ const dirInv = () => {
 
 <style scoped>
 .card {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
   border: 1px solid var(--border);
   position: relative;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .card:hover {
-  border-color: rgba(37, 99, 235, 0.3);
+  border-color: var(--primary-hover);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .card h3 {
-  margin: 0 0 12px 0;
-  font-size: 10px;
-  color: var(--muted);
+  margin: 0 0 var(--space-4) 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1.2px;
-  font-weight: 600;
+  letter-spacing: 0.05em;
+  font-weight: 700;
 }
 
 .controls {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-4);
 }
 
 button {
-  padding: 12px 18px;
-  font-size: 12px;
+  padding: var(--space-4) var(--space-6);
+  min-height: 56px; /* Fitts's Law: Large touch target */
+  font-size: 0.875rem;
   font-weight: 600;
-  border-radius: 8px;
-  border: none;
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.05em;
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
 }
 
-button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.15);
-  transform: translate(-50%, -50%);
-  transition: width 0.5s, height 0.5s;
-}
-
-button:active::before {
-  width: 300px;
-  height: 300px;
-}
-
-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-}
-
-button:active:not(:disabled) { 
-  transform: scale(0.98); 
-}
-
-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn-start { 
-  background: var(--green);
-  color: #fff;
+/* Button Variants */
+.btn-start {
+  background: var(--success-light);
+  color: var(--success);
+  border-color: rgba(16, 185, 129, 0.2);
 }
 
 .btn-start:hover:not(:disabled) {
-  background: #16a34a;
+  background: var(--success);
+  color: #fff;
 }
 
-.btn-stop  { 
-  background: var(--red);
-  color: #fff;
+.btn-stop {
+  background: var(--danger-light);
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.2);
 }
 
 .btn-stop:hover:not(:disabled) {
-  background: #dc2626;
-}
-
-.btn-dir   { 
-  background: var(--primary);
+  background: var(--danger);
   color: #fff;
 }
 
+.btn-dir {
+  background: var(--surface-hover);
+  color: var(--text-main);
+  border-color: var(--border);
+}
+
 .btn-dir:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: var(--surface-active);
+  border-color: var(--text-muted);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+/* Touch Feedback */
+button:active {
+  transform: scale(0.98);
 }
 </style>

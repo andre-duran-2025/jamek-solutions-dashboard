@@ -73,7 +73,7 @@ const emit = defineEmits(['back', 'open-config'])
 
 .main-content {
   flex: 1;
-  padding: 32px 24px;
+  padding: var(--space-8) var(--space-6);
 }
 
 .container {
@@ -84,34 +84,34 @@ const emit = defineEmits(['back', 'open-config'])
 .dashboard-grid {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .metrics-section {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .info-section {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 @media (max-width: 768px) {
   .main-content {
-    padding: 20px 16px;
+    padding: var(--space-5) var(--space-4);
   }
   
   .metrics-section,
   .info-section {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: var(--space-4);
   }
   
   .dashboard-grid {
-    gap: 16px;
+    gap: var(--space-4);
   }
 }
 </style>

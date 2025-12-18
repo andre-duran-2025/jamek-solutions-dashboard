@@ -69,7 +69,7 @@ const getFreq = (id) => {
 
 <style scoped>
 .dashboard-view {
-  padding: 32px 24px;
+  padding: var(--space-8) var(--space-6);
   flex: 1;
   background: var(--bg);
 }
@@ -80,12 +80,12 @@ const getFreq = (id) => {
 }
 
 .header-section {
-  margin-bottom: 32px;
+  margin-bottom: var(--space-8);
 }
 
 .header-section h2 {
   font-size: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-2);
   color: var(--text-main);
 }
 
@@ -96,15 +96,15 @@ const getFreq = (id) => {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-6);
 }
 
 .inverter-card {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem;
+  gap: var(--space-4);
+  padding: var(--space-5);
   text-align: left;
   position: relative;
   overflow: hidden;
@@ -165,9 +165,9 @@ const getFreq = (id) => {
 }
 
 .icon-box {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -183,11 +183,11 @@ const getFreq = (id) => {
 }
 
 .value {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--text-main);
   line-height: 1;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
   font-family: 'Inter', monospace;
 }
 

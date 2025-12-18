@@ -306,6 +306,9 @@ export function useWebSocket() {
     // Check if it has 'inv' or 'id' field
     const id = data.inv || data.id
     if (id) {
+      // Implicitly mark gateway as online if we receive inverter data
+      isGatewayOnline.value = true
+      
       const state = ensureInverterState(id)
       state.lastMessageTime = Date.now()
       updateLastUpdate(id)

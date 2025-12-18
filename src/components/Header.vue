@@ -62,12 +62,12 @@ const emit = defineEmits(['open-config', 'navigate'])
 
 <style scoped>
 header {
-  height: 64px;
-  padding: 0 24px;
+  height: var(--space-16);
+  padding: 0 var(--space-6);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--surface); /* Changed to surface for consistency */
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -78,13 +78,13 @@ header {
 .left-section {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .logo-icon {
@@ -92,7 +92,7 @@ header {
   height: 32px;
   background: var(--primary);
   color: white;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -101,33 +101,32 @@ header {
 .brand-text {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-h1 {
-  font-size: 18px;
+.brand-text h1 {
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-main);
-  letter-spacing: -0.01em;
-  margin: 0;
+  letter-spacing: -0.025em;
 }
 
 .badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 6px;
   background: var(--surface-active);
   color: var(--text-muted);
-  border-radius: 4px;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
 }
 
 .btn-back {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
   color: var(--text-muted);
   transition: var(--transition);
 }
@@ -138,32 +137,28 @@ h1 {
 }
 
 .context-title h2 {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-main);
-  margin: 0;
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .status-group {
   display: flex;
-  gap: 16px;
-  padding-right: 24px;
+  gap: var(--space-4);
+  padding-right: var(--space-4);
   border-right: 1px solid var(--border);
 }
 
 .status-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-muted);
-  font-weight: 500;
+  gap: var(--space-2);
 }
 
 .dot {
@@ -171,23 +166,33 @@ h1 {
   height: 8px;
   border-radius: 50%;
   background: var(--danger);
+  box-shadow: 0 0 0 2px var(--surface);
   transition: var(--transition);
 }
 
 .status-item.active .dot {
   background: var(--success);
-  box-shadow: 0 0 8px var(--success-light);
+  box-shadow: 0 0 0 2px var(--surface), 0 0 8px var(--success-light);
 }
 
-.status-item.active {
-  color: var(--text-main);
+.label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .btn-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-muted);
-  padding: 8px;
-  border-radius: 8px;
   transition: var(--transition);
+  background: transparent;
 }
 
 .btn-icon:hover {
