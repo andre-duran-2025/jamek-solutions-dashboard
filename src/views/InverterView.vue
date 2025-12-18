@@ -185,14 +185,14 @@ const emit = defineEmits(['open-config']);
               :icon="Play"
               variant="start"
               @click="handleStart"
-              :disabled="inverter.running || !isConnected"
+              :disabled="!isConnected"
             />
             <ControlButton
               label="Parar"
               :icon="Square"
               variant="stop"
               @click="handleStop"
-              :disabled="!inverter.running || !isConnected"
+              :disabled="!isConnected"
             />
             <ControlButton
               label="Reset de Falha"
