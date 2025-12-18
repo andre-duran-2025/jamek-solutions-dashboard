@@ -102,8 +102,11 @@ let currentReconnectInterval = CONFIG.reconnectInterval
 export function useWebSocket() {
   
   const getWebSocketUrl = () => {
-    // Check if host includes protocol
-    const host = serverConfig.host || 'localhost'
+    // Determine host: prefer config, fallback to window.location.host, default to 'painel.jamek.com.br'
+    let host = serverConfig.host
+    if (!host || host === 'localhost') {
+       host = window.location.host || 'painel.jamek.com.br'
+    }
     
     // Auto-detect protocol based on current page if not explicitly set, 
     // but prioritize config if it matches the security context
@@ -116,7 +119,7 @@ export function useWebSocket() {
       protocol = 'wss://'
     }
 
-    // Remove protocol if present in host to avoid duplication
+    // Clean host from any protocol prefix
     const cleanHost = host.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '')
     return `${protocol}${cleanHost}/api/ws/inversor`
   }
