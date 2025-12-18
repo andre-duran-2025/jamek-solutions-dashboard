@@ -104,7 +104,18 @@ export function useWebSocket() {
   const getWebSocketUrl = () => {
     // Check if host includes protocol
     const host = serverConfig.host || 'localhost'
-    const protocol = serverConfig.useSSL ? 'wss://' : 'ws://'
+    
+    // Auto-detect protocol based on current page if not explicitly set, 
+    // but prioritize config if it matches the security context
+    const isSecure = window.location.protocol === 'https:'
+    let protocol = serverConfig.useSSL ? 'wss://' : 'ws://'
+    
+    // Force WSS if page is loaded via HTTPS to avoid Mixed Content errors
+    if (isSecure && protocol === 'ws://') {
+      console.warn("Forcing WSS because page is loaded via HTTPS")
+      protocol = 'wss://'
+    }
+
     // Remove protocol if present in host to avoid duplication
     const cleanHost = host.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '')
     return `${protocol}${cleanHost}/api/ws/inversor`

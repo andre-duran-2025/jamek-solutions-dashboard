@@ -10,7 +10,7 @@ const serverConfig = ref({ ...defaultConfig })
 
 export function useConfig() {
   const loadConfig = () => {
-    const saved = localStorage.getItem('jamek_config')
+    const saved = localStorage.getItem('jamek_config_v2')
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
@@ -24,7 +24,7 @@ export function useConfig() {
 
   const saveConfig = (newConfig) => {
     serverConfig.value = { ...newConfig }
-    localStorage.setItem('jamek_config', JSON.stringify(serverConfig.value))
+    localStorage.setItem('jamek_config_v2', JSON.stringify(serverConfig.value))
   }
 
   // Load immediately
