@@ -1,102 +1,47 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref } from 'vue'
 import { useWebSocket } from '@/composables/useWebSocket'
-import Header from '@/components/Header.vue'
-import ConfigModal from '@/components/ConfigModal.vue'
-import ToastContainer from '@/components/ToastContainer.vue'
+import { useNavigation } from '@/composables/useNavigation'
+import MainLayout from '@/layouts/MainLayout.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import InverterView from '@/views/InverterView.vue'
+import InverterListView from '@/views/InverterListView.vue'
+import ToastContainer from '@/components/ToastContainer.vue'
+import ConfigModal from '@/components/ConfigModal.vue'
 
-const { connect, disconnect, activeInverterId } = useWebSocket()
+const { connect, disconnect } = useWebSocket()
+const { currentView } = useNavigation()
 const showConfig = ref(false)
-const currentView = ref('dashboard') // dashboard | inverter
 
-const headerTitle = computed(() => {
-  return currentView.value === 'inverter' 
-    ? `Inversor ${String(activeInverterId.value).padStart(2, '0')}`
-    : 'JAMEK'
-})
-
-onMounted(() => {
-  connect()
-  document.addEventListener('visibilitychange', handleVisibilityChange)
-  window.addEventListener('beforeunload', handleBeforeUnload)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('visibilitychange', handleVisibilityChange)
-  window.removeEventListener('beforeunload', handleBeforeUnload)
-  disconnect()
-})
-
-const handleVisibilityChange = () => {
-  if (!document.hidden) {
-    connect()
-  }
-}
-
-const handleBeforeUnload = () => {
-  disconnect()
-}
-
-const navigateToInverter = (id) => {
-  currentView.value = 'inverter'
-  window.scrollTo(0, 0)
-}
-
-const navigateToDashboard = () => {
-  currentView.value = 'dashboard'
-  window.scrollTo(0, 0)
-}
+// Initial connection
+connect()
 </script>
 
 <template>
   <ToastContainer />
   <ConfigModal :isOpen="showConfig" @close="showConfig = false" />
   
-  <Header 
-    :view="currentView" 
-    :title="headerTitle"
-    @open-config="showConfig = true" 
-    @navigate="navigateToDashboard"
-  />
-  
-  <div class="content-wrapper">
+  <MainLayout>
     <transition name="fade" mode="out-in">
-      <DashboardView 
-        v-if="currentView === 'dashboard'" 
-        @select="navigateToInverter" 
-      />
+      <DashboardView v-if="currentView === 'dashboard'" />
       <InverterView 
-        v-else 
+        v-else-if="currentView === 'inverter'" 
         @open-config="showConfig = true"
       />
+      <InverterListView v-else-if="currentView === 'inverters'" />
+      <!-- Placeholder for other views -->
+      <div v-else class="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <div class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+          <span class="text-2xl">🚧</span>
+        </div>
+        <h2 class="text-xl font-semibold mb-2">Em Desenvolvimento</h2>
+        <p class="text-muted-foreground">A página {{ currentView }} está sendo construída.</p>
+      </div>
     </transition>
-  </div>
-  
-  <footer>
-    © 2024 JAMEK Solutions • Sistema v4.1 Node-RED Edition • Desenvolvido com ❤️
-  </footer>
+  </MainLayout>
 </template>
 
-<style scoped>
-.content-wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-footer {
-  padding: 12px 20px;
-  text-align: center;
-  font-size: 10px;
-  color: var(--text-muted);
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-  flex-shrink: 0;
-  letter-spacing: 0.5px;
-}
-
+<style>
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;

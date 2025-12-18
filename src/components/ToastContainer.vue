@@ -1,80 +1,56 @@
 <script setup>
 import { useToast } from '@/composables/useToast'
+import { CheckCircle2, AlertTriangle, XCircle, Info } from 'lucide-vue-next'
 
 const { toasts } = useToast()
+
+const getIcon = (type) => {
+  switch (type) {
+    case 'success': return CheckCircle2
+    case 'warning': return AlertTriangle
+    case 'error': return XCircle
+    default: return Info
+  }
+}
+
+const getTypeClasses = (type) => {
+  switch (type) {
+    case 'success': return 'border-l-4 border-l-green-500'
+    case 'warning': return 'border-l-4 border-l-yellow-500'
+    case 'error': return 'border-l-4 border-l-red-500'
+    default: return 'border-l-4 border-l-blue-500'
+  }
+}
+
+const getIconColor = (type) => {
+  switch (type) {
+    case 'success': return 'text-green-500'
+    case 'warning': return 'text-yellow-500'
+    case 'error': return 'text-red-500'
+    default: return 'text-blue-500'
+  }
+}
 </script>
 
 <template>
-  <div class="toast-container">
-    <transition-group name="toast">
+  <div class="fixed top-4 right-4 left-4 md:left-auto md:w-96 z-50 flex flex-col gap-3 pointer-events-none">
+    <transition-group 
+      enter-active-class="transform ease-out duration-300 transition"
+      enter-from-class="translate-y-[-1rem] opacity-0 md:translate-y-0 md:translate-x-8"
+      enter-to-class="translate-y-0 opacity-100 md:translate-x-0"
+      leave-active-class="transition ease-in duration-100"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
       <div 
         v-for="toast in toasts" 
         :key="toast.id" 
-        class="toast" 
-        :class="toast.type"
+        class="pointer-events-auto bg-card border border-border rounded-lg shadow-lg p-4 flex items-start gap-3"
+        :class="getTypeClasses(toast.type)"
       >
-        <div class="toast-indicator"></div>
-        <span class="toast-message">{{ toast.message }}</span>
+        <component :is="getIcon(toast.type)" class="w-5 h-5 mt-0.5" :class="getIconColor(toast.type)" />
+        <p class="text-sm font-medium text-foreground">{{ toast.message }}</p>
       </div>
     </transition-group>
   </div>
 </template>
-
-<style scoped>
-.toast-container {
-  position: fixed;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-width: 400px;
-}
-
-.toast {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 1rem 1.25rem;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-width: 320px;
-}
-
-.toast-indicator {
-  width: 4px;
-  height: 2.5rem;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.toast-message {
-  flex: 1;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-main);
-}
-
-.toast.success .toast-indicator { background: var(--success); }
-.toast.error .toast-indicator { background: var(--danger); }
-.toast.warning .toast-indicator { background: var(--warning); }
-.toast.info .toast-indicator { background: var(--info); }
-
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.3s ease-out;
-}
-
-.toast-enter-from {
-  opacity: 0;
-  transform: translateX(100px);
-}
-
-.toast-leave-to {
-  opacity: 0;
-  transform: translateX(100px);
-}
-</style>

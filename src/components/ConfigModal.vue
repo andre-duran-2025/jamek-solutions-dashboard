@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { useConfig } from '@/composables/useConfig'
 import { useToast } from '@/composables/useToast'
 import { useWebSocket } from '@/composables/useWebSocket'
+import { Settings, X } from 'lucide-vue-next'
 
 const props = defineProps({
   isOpen: Boolean
@@ -41,98 +42,66 @@ const saveConfig = () => {
 </script>
 
 <template>
-  <div class="modal-overlay" :class="{ show: isOpen }">
-    <div class="modal">
-      <h2>⚙️ Configurações</h2>
-      <div class="form-group">
-        <label>Endereço do Servidor Node-RED</label>
-        <input type="text" v-model="form.host" placeholder="IP ou domínio (ex: 149.28.236.238)">
+  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-fade-in">
+    <div class="w-full max-w-md bg-card border border-border rounded-lg shadow-lg p-6 animate-scale-in mx-4">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-2">
+          <Settings class="w-5 h-5 text-primary" />
+          <h2 class="text-xl font-semibold text-foreground">Configurações</h2>
+        </div>
+        <button @click="emit('close')" class="text-muted-foreground hover:text-foreground transition-colors">
+          <X class="w-5 h-5" />
+        </button>
       </div>
-      <div class="form-group">
-        <label>Porta WebSocket</label>
-        <input type="number" v-model="form.port" placeholder="1880">
+
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-muted-foreground">Endereço do Servidor Node-RED</label>
+          <input 
+            type="text" 
+            v-model="form.host" 
+            placeholder="IP ou domínio (ex: 149.28.236.238)"
+            class="w-full h-10 px-3 rounded-md bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-input"
+          >
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-muted-foreground">Porta WebSocket</label>
+          <input 
+            type="number" 
+            v-model="form.port" 
+            placeholder="1880"
+            class="w-full h-10 px-3 rounded-md bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-input"
+          >
+        </div>
+
+        <div class="flex items-center gap-3 py-2">
+          <input 
+            type="checkbox" 
+            id="useSSL"
+            v-model="form.useSSL"
+            class="w-4 h-4 rounded border-input bg-background text-primary focus:ring-ring"
+          >
+          <label for="useSSL" class="text-sm font-medium text-muted-foreground select-none cursor-pointer">
+            Usar conexão segura (SSL/WSS)
+          </label>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Usar SSL (wss://)</label>
-        <input type="checkbox" v-model="form.useSSL">
-      </div>
-      <div class="modal-actions">
-        <button class="btn-secondary" @click="emit('close')">Cancelar</button>
-        <button class="btn-primary" @click="saveConfig">Salvar e Reconectar</button>
+
+      <div class="flex justify-end gap-3 mt-8">
+        <button 
+          @click="emit('close')"
+          class="px-4 py-2 text-sm font-medium text-secondary-foreground bg-secondary rounded-md hover:bg-secondary/80 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button 
+          @click="saveConfig"
+          class="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-md hover:bg-primary/90 transition-colors"
+        >
+          Salvar e Reconectar
+        </button>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.modal-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(15, 23, 42, 0.8); /* Slate-900 with opacity */
-  z-index: 9999;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-  transition: var(--transition);
-}
-
-.modal-overlay.show {
-  display: flex;
-  animation: fadeIn 0.2s ease-out;
-}
-
-.modal {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  max-width: 500px;
-  width: 90%;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
-  transform: scale(0.95);
-  opacity: 0;
-  animation: scaleIn 0.2s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.modal h2 {
-  margin-bottom: 1.5rem;
-  color: var(--text-main);
-  font-size: 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.form-group {
-  margin-bottom: 1.25rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.modal-actions {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-}
-</style>
