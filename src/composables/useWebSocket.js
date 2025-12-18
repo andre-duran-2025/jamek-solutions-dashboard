@@ -404,8 +404,18 @@ export function useWebSocket() {
   }
 
   const connect = () => {
-    if (ws.value && (ws.value.readyState === WebSocket.CONNECTING || ws.value.readyState === WebSocket.OPEN)) {
-      return
+    // Prevent multiple connections
+    if (ws.value) {
+      if (ws.value.readyState === WebSocket.CONNECTING || ws.value.readyState === WebSocket.OPEN) {
+        return
+      }
+      // Explicitly close dead connection before creating new one
+      try {
+        ws.value.close()
+      } catch (e) {
+        // ignore
+      }
+      ws.value = null
     }
     
     const wsUrl = getWebSocketUrl()
@@ -506,10 +516,16 @@ export function useWebSocket() {
     if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
       console.warn("⚠️ WebSocket não está pronto. Tentando reconectar...")
       addLog("Erro: Desconectado. Tentando reconectar...", "error")
-      showToast("Conexão perdida. Tentando reconectar...", "error")
       // Force immediate reconnect attempt
       connect()
       return false
+    }
+
+    // Check buffer size to prevent freeze
+    if (ws.value.bufferedAmount > 10240) { // 10KB buffered
+       console.warn("⚠️ Buffer cheio, comando descartado")
+       addLog("Rede lenta - comando descartado", "warning")
+       return false
     }
     
     const state = ensureInverterState(activeInverterId.value) // Ensure state exists

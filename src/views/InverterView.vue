@@ -90,9 +90,11 @@ const onSliderInput = () => {
 };
 
 const onSliderChange = () => {
-  isUserInteracting.value = false;
-  sendCommand('freq', Number(localFreq.value));
-  showToast(`Frequência ajustada para ${localFreq.value} Hz`, 'info');
+  if (isUserInteracting.value) {
+    isUserInteracting.value = false;
+    sendCommand('freq', Number(localFreq.value));
+    showToast(`Frequência ajustada para ${localFreq.value} Hz`, 'info');
+  }
 };
 
 const emit = defineEmits(['open-config']);
@@ -218,7 +220,7 @@ const emit = defineEmits(['open-config']);
               <span class="text-2xl font-bold text-foreground">{{ localFreq }} <span class="text-sm text-muted-foreground font-normal">Hz</span></span>
             </div>
             
-            <div class="relative w-full h-12 flex items-center">
+            <div class="relative w-full h-12 flex items-center" @mouseleave="onSliderChange">
               <input 
                 type="range" 
                 min="0" 
