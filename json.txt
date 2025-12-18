@@ -2,23 +2,29 @@
     {
         "id": "multi_inv_tab",
         "type": "tab",
-        "label": "MULTI-INVERSOR 21x",
+        "label": "ULTRA-RÁPIDO v5.4",
         "disabled": false,
-        "info": "Flow completo para controle de 21 inversores via MQTT e WebSocket"
+        "info": "Flow otimizado segundo 10 princípios de baixa latência"
     },
     {
         "id": "mqtt_broker",
         "type": "mqtt-broker",
-        "name": "Broker Principal",
+        "name": "Broker Rápido",
         "broker": "localhost",
         "port": 1883,
-        "clientid": "nodered_multi_inv",
+        "clientid": "nr_fast",
         "autoConnect": true,
         "usetls": false,
-        "protocolVersion": 4,
-        "keepalive": 60,
-        "cleansession": true,
-        "autoUnsubscribe": true
+        "keepalive": 5,
+        "cleansession": false,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": ""
     },
     {
         "id": "ws_listener",
@@ -27,370 +33,328 @@
         "wholemsg": "false"
     },
     {
-        "id": "ws_in",
+        "id": "ws_cmd_in",
         "type": "websocket in",
         "z": "multi_inv_tab",
-        "name": "WS Comandos",
+        "name": "CMD IN",
         "server": "ws_listener",
         "client": "",
-        "x": 120,
+        "x": 80,
         "y": 60,
-        "wires": [["validacao_cmd"]]
+        "wires": [
+            [
+                "cmd_direto"
+            ]
+        ]
     },
     {
-        "id": "validacao_cmd",
+        "id": "cmd_direto",
         "type": "function",
         "z": "multi_inv_tab",
-        "name": "Validação Completa",
-        "func": "// Parse JSON\nif (typeof msg.payload === \"string\") {\n    try {\n        msg.payload = JSON.parse(msg.payload);\n    } catch (e) {\n        node.error(\"JSON inválido\", msg);\n        return [null, { payload: { erro: \"JSON inválido\" } }];\n    }\n}\n\nconst { inv, cmd, value } = msg.payload;\n\n// Valida campos obrigatórios\nif (inv === undefined || cmd === undefined) {\n    return [null, { payload: { erro: \"Campos 'inv' e 'cmd' obrigatórios\" } }];\n}\n\n// Valida ID (1-21)\nif (inv < 1 || inv > 21) {\n    return [null, { payload: { erro: `ID inválido: ${inv} (deve ser 1-21)` } }];\n}\n\n// Valida comandos\nswitch (cmd) {\n    case \"start\":\n    case \"stop\":\n    case \"direcao\":\n    case \"reset\":\n        // Sem validação adicional\n        break;\n        \n    case \"freq\":\n    case \"frequencia\":\n        if (value === undefined || value < 0 || value > 60) {\n            return [null, { payload: { erro: `Frequência inválida: ${value} (0-60Hz)` } }];\n        }\n        break;\n        \n    default:\n        return [null, { payload: { erro: `Comando desconhecido: ${cmd}` } }];\n}\n\n// Log\nnode.log(`✅ CMD válido: INV${inv} - ${cmd} ${value !== undefined ? '= ' + value : ''}`);\n\n// Retorna [válido, erro]\nreturn [msg, null];",
-        "outputs": 2,
-        "outputLabels": ["Válido", "Erro"],
-        "x": 320,
-        "y": 60,
-        "wires": [["mqtt_cmd_format", "log_cmds"], ["ws_erro"]]
-    },
-    {
-        "id": "mqtt_cmd_format",
-        "type": "function",
-        "z": "multi_inv_tab",
-        "name": "Formata MQTT",
-        "func": "const { inv, cmd, value } = msg.payload;\nlet out = {};\n\nswitch (cmd) {\n    case \"start\":\n        out.topic = `inversor/${inv}/cmd/start`;\n        out.payload = \"1\";\n        break;\n\n    case \"stop\":\n        out.topic = `inversor/${inv}/cmd/stop`;\n        out.payload = \"1\";\n        break;\n\n    case \"freq\":\n    case \"frequencia\":\n        out.topic = `inversor/${inv}/cmd/frequencia`;\n        out.payload = String(value);\n        break;\n\n    case \"direcao\":\n        out.topic = `inversor/${inv}/cmd/direcao`;\n        out.payload = \"1\";\n        break;\n        \n    case \"reset\":\n        out.topic = `inversor/${inv}/cmd/reset`;\n        out.payload = \"1\";\n        break;\n\n    default:\n        return null;\n}\n\nreturn out;",
+        "name": "DIRETO QoS0",
+        "func": "// SUGESTÃO 1: Processamento MÍNIMO\n// SUGESTÃO 4: Payload pequeno\n// SUGESTÃO 7: SEM context\n\n// Parse inline sem try/catch (mais rápido)\nlet p = (typeof msg.payload === \"string\") ? JSON.parse(msg.payload) : msg.payload;\n\n// Extração direta\nconst i = p.inv;\nconst c = p.cmd;\nconst v = p.value;\n\n// Montagem direta do tópico (sem switch, mais rápido)\nlet t = \"inversor/\" + i + \"/cmd/\";\nlet pl = \"1\";\n\nif (c === \"start\") t += \"start\";\nelse if (c === \"stop\") t += \"stop\";\nelse if (c === \"freq\" || c === \"frequencia\") {\n    t += \"frequencia\";\n    pl = String(v);\n}\nelse if (c === \"direcao\") t += \"direcao\";\nelse return null;\n\n// SUGESTÃO 10: Timestamp para monitoramento\nmsg._ts = Date.now();\n\nreturn {topic: t, payload: pl};",
         "outputs": 1,
-        "x": 540,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 230,
         "y": 60,
-        "wires": [["mqtt_out"]]
+        "wires": [
+            [
+                "mqtt_cmd_out"
+            ]
+        ]
     },
     {
-        "id": "mqtt_out",
+        "id": "mqtt_cmd_out",
         "type": "mqtt out",
         "z": "multi_inv_tab",
-        "name": "Publica Comandos",
+        "name": "QoS 0",
         "topic": "",
-        "qos": "1",
+        "qos": "0",
         "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
         "broker": "mqtt_broker",
-        "x": 760,
+        "x": 390,
         "y": 60,
         "wires": []
     },
     {
-        "id": "mqtt_status",
+        "id": "mqtt_status_in",
         "type": "mqtt in",
         "z": "multi_inv_tab",
-        "name": "Status Inversores",
+        "name": "STATUS (separado)",
         "topic": "inversor/+/status/#",
         "qos": "0",
         "datatype": "auto-detect",
         "broker": "mqtt_broker",
         "nl": false,
-        "rap": true,
+        "rap": false,
         "rh": 0,
         "inputs": 0,
         "x": 130,
-        "y": 180,
-        "wires": [["cache_status"]]
+        "y": 160,
+        "wires": [
+            [
+                "status_parse"
+            ]
+        ]
     },
     {
-        "id": "cache_status",
+        "id": "status_parse",
         "type": "function",
         "z": "multi_inv_tab",
-        "name": "Cache Inteligente",
-        "func": "// Inicializa cache global\nif (!flow.get('inversores')) {\n    const inv = {};\n    for (let i = 1; i <= 21; i++) {\n        inv[i] = {\n            id: i,\n            online: false,\n            rodando: false,\n            frequencia: 0,\n            frequencia_setpoint: 0,\n            corrente: 0,\n            direcao: \"frente\",\n            ultima_atualizacao: 0\n        };\n    }\n    flow.set('inversores', inv);\n}\n\nconst inversores = flow.get('inversores');\n\n// Parse tópico: inversor/{id}/status/{campo}\nconst match = msg.topic.match(/inversor\\/(\\d+)\\/status\\/(.+)/);\n\nif (match) {\n    const invId = parseInt(match[1]);\n    const campo = match[2];\n    \n    if (invId >= 1 && invId <= 21) {\n        inversores[invId][campo] = msg.payload;\n        inversores[invId].ultima_atualizacao = Date.now();\n        \n        flow.set('inversores', inversores);\n        \n        // Retorna status completo do inversor\n        return {\n            payload: {\n                inv: invId,\n                ...inversores[invId]\n            },\n            topic: `status_update_${invId}`\n        };\n    }\n}\n\nreturn null;",
+        "name": "Parse Status",
+        "func": "// SUGESTÃO 6: Fluxo separado de telemetria\n// Este fluxo NÃO interfere no caminho de comando\n\nconst m = msg.topic.match(/inversor\\/(\\d+)\\/status\\/(.+)/);\nif (!m) return null;\n\nconst id = parseInt(m[1]);\nconst key = m[2];\n\n// SUGESTÃO 10: Calcula latência se houver timestamp\nlet latency = null;\nif (msg._ts) {\n    latency = Date.now() - msg._ts;\n}\n\nreturn {\n    payload: {\n        inv: id,\n        [key]: msg.payload,\n        _latency: latency\n    }\n};",
         "outputs": 1,
-        "x": 350,
-        "y": 180,
-        "wires": [["ws_out", "dashboard_update"]]
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 160,
+        "wires": [
+            [
+                "ws_status_out",
+                "update_cache",
+                "monitor_latency"
+            ]
+        ]
     },
     {
-        "id": "ws_out",
+        "id": "ws_status_out",
         "type": "websocket out",
         "z": "multi_inv_tab",
-        "name": "WS Status",
+        "name": "STATUS OUT",
         "server": "ws_listener",
         "client": "",
-        "x": 730,
-        "y": 180,
+        "x": 510,
+        "y": 160,
         "wires": []
     },
     {
-        "id": "mqtt_erros",
+        "id": "mqtt_hb_in",
         "type": "mqtt in",
         "z": "multi_inv_tab",
-        "name": "Erros Inversores",
-        "topic": "inversor/+/erro",
-        "qos": "0",
-        "datatype": "auto-detect",
-        "broker": "mqtt_broker",
-        "nl": false,
-        "rap": true,
-        "inputs": 0,
-        "x": 130,
-        "y": 240,
-        "wires": [["log_erros", "ws_erro"]]
-    },
-    {
-        "id": "ws_erro",
-        "type": "function",
-        "z": "multi_inv_tab",
-        "name": "Formata Erro",
-        "func": "let invId = null;\n\nif (msg.topic) {\n    const match = msg.topic.match(/inversor\\/(\\d+)\\/erro/);\n    if (match) invId = parseInt(match[1]);\n}\n\nreturn {\n    payload: {\n        tipo: 'erro',\n        inversor: invId,\n        mensagem: msg.payload.erro || msg.payload,\n        timestamp: new Date().toISOString()\n    }\n};",
-        "outputs": 1,
-        "x": 540,
-        "y": 240,
-        "wires": [["ws_out"]]
-    },
-    {
-        "id": "mqtt_heartbeat",
-        "type": "mqtt in",
-        "z": "multi_inv_tab",
-        "name": "Gateway Heartbeat",
+        "name": "HB (separado)",
         "topic": "inversor/gateway/heartbeat",
         "qos": "0",
         "datatype": "json",
         "broker": "mqtt_broker",
         "nl": false,
-        "rap": true,
+        "rap": false,
+        "rh": 0,
         "inputs": 0,
-        "x": 150,
-        "y": 300,
-        "wires": [["heartbeat_proc"]]
+        "x": 120,
+        "y": 220,
+        "wires": [
+            [
+                "ws_status_out"
+            ]
+        ]
     },
     {
-        "id": "heartbeat_proc",
-        "type": "function",
-        "z": "multi_inv_tab",
-        "name": "Processa Heartbeat",
-        "func": "const data = msg.payload;\n\nconst status = {\n    tipo: 'gateway_status',\n    online: true,\n    uptime: data.uptime,\n    free_heap: data.free_heap,\n    wifi_rssi: data.wifi_rssi,\n    inversores_online: data.inversores_online || 0,\n    timestamp: new Date().toISOString()\n};\n\nflow.set('gateway_status', status);\n\n// Alertas\nif (data.free_heap < 50000) {\n    node.warn(`⚠️  Heap baixo: ${data.free_heap} bytes`);\n}\n\nif (data.wifi_rssi < -80) {\n    node.warn(`⚠️  WiFi fraco: ${data.wifi_rssi} dBm`);\n}\n\nreturn { payload: status };",
-        "outputs": 1,
-        "x": 380,
-        "y": 300,
-        "wires": [["ws_out"]]
-    },
-    {
-        "id": "mqtt_stats",
-        "type": "mqtt in",
-        "z": "multi_inv_tab",
-        "name": "Gateway Stats",
-        "topic": "inversor/gateway/stats",
-        "qos": "0",
-        "datatype": "json",
-        "broker": "mqtt_broker",
-        "nl": false,
-        "rap": true,
-        "inputs": 0,
-        "x": 140,
-        "y": 360,
-        "wires": [["stats_proc"]]
-    },
-    {
-        "id": "stats_proc",
-        "type": "function",
-        "z": "multi_inv_tab",
-        "name": "Processa Stats",
-        "func": "return {\n    payload: {\n        tipo: 'gateway_stats',\n        ...msg.payload,\n        timestamp: new Date().toISOString()\n    }\n};",
-        "outputs": 1,
-        "x": 360,
-        "y": 360,
-        "wires": [["ws_out"]]
-    },
-    {
-        "id": "log_cmds",
-        "type": "function",
-        "z": "multi_inv_tab",
-        "name": "Log Comandos",
-        "func": "const log = {\n    timestamp: new Date().toISOString(),\n    inversor: msg.payload.inv,\n    comando: msg.payload.cmd,\n    valor: msg.payload.value,\n    origem: 'websocket'\n};\n\nlet logs = context.get('logs') || [];\nlogs.push(log);\n\n// Mantém últimas 1000 entradas\nif (logs.length > 1000) {\n    logs = logs.slice(-1000);\n}\n\ncontext.set('logs', logs);\nnode.log(JSON.stringify(log));\n\nreturn null;",
-        "outputs": 0,
-        "x": 540,
-        "y": 120,
-        "wires": []
-    },
-    {
-        "id": "log_erros",
-        "type": "function",
-        "z": "multi_inv_tab",
-        "name": "Log Erros",
-        "func": "const match = msg.topic.match(/inversor\\/(\\d+)\\/erro/);\nconst invId = match ? parseInt(match[1]) : null;\n\nconst log = {\n    timestamp: new Date().toISOString(),\n    inversor: invId,\n    erro: msg.payload,\n    nivel: 'error'\n};\n\nlet erros = context.get('erros') || [];\nerros.push(log);\n\nif (erros.length > 500) {\n    erros = erros.slice(-500);\n}\n\ncontext.set('erros', erros);\nnode.error(`❌ INV${invId}: ${msg.payload}`, msg);\n\nreturn null;",
-        "outputs": 0,
-        "x": 530,
-        "y": 280,
-        "wires": []
-    },
-    {
-        "id": "watchdog",
+        "id": "test_latency",
         "type": "inject",
         "z": "multi_inv_tab",
-        "name": "Watchdog 60s",
-        "props": [],
-        "repeat": "60",
+        "name": "🧪 TESTE Latência INV 1",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "_ts",
+                "v": "",
+                "vt": "date"
+            }
+        ],
+        "repeat": "",
         "crontab": "",
         "once": false,
-        "x": 130,
-        "y": 420,
-        "wires": [["check_timeout"]]
-    },
-    {
-        "id": "check_timeout",
-        "type": "function",
-        "z": "multi_inv_tab",
-        "name": "Verifica Timeout",
-        "func": "const gateway = flow.get('gateway_status');\nconst inversores = flow.get('inversores') || {};\nconst now = Date.now();\n\n// Verifica gateway offline\nif (!gateway || now - new Date(gateway.timestamp).getTime() > 90000) {\n    node.warn('🔴 Gateway ESP32 offline há mais de 90s!');\n    \n    return {\n        payload: {\n            tipo: 'alerta',\n            severidade: 'critico',\n            mensagem: 'Gateway ESP32 offline',\n            timestamp: new Date().toISOString()\n        }\n    };\n}\n\n// Verifica inversores sem atualização há muito tempo\nconst alertas = [];\nfor (let id in inversores) {\n    const inv = inversores[id];\n    if (inv.online && now - inv.ultima_atualizacao > 120000) {\n        alertas.push({\n            tipo: 'alerta',\n            severidade: 'aviso',\n            mensagem: `Inversor ${id} sem atualização há 2min`,\n            timestamp: new Date().toISOString()\n        });\n    }\n}\n\nif (alertas.length > 0) {\n    return alertas.map(a => ({ payload: a }));\n}\n\nreturn null;",
-        "outputs": 1,
-        "x": 350,
-        "y": 420,
-        "wires": [["ws_out"]]
-    },
-    {
-        "id": "dashboard_update",
-        "type": "function",
-        "z": "multi_inv_tab",
-        "name": "Dashboard Update",
-        "func": "// Este nó pode ser conectado a widgets do node-red-dashboard\n// Exemplo de saídas para diferentes widgets\n\nconst inv = msg.payload;\nconst id = inv.inv || inv.id;\n\nif (!id) return null;\n\n// Retorna múltiplas saídas para diferentes widgets\nreturn [\n    { payload: inv.online === \"1\" || inv.online === true, topic: `inv${id}_online` },\n    { payload: inv.rodando === \"1\" || inv.rodando === true, topic: `inv${id}_rodando` },\n    { payload: parseFloat(inv.frequencia) || 0, topic: `inv${id}_freq` },\n    { payload: parseFloat(inv.corrente) || 0, topic: `inv${id}_corrente` },\n    { payload: inv.direcao || \"frente\", topic: `inv${id}_direcao` }\n];",
-        "outputs": 5,
-        "x": 570,
-        "y": 180,
-        "wires": [[], [], [], [], []]
-    },
-    {
-        "id": "api_status_all",
-        "type": "http in",
-        "z": "multi_inv_tab",
-        "name": "",
-        "url": "/api/inversor/status",
-        "method": "get",
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"inv\":1,\"cmd\":\"start\"}",
+        "payloadType": "json",
         "x": 150,
-        "y": 500,
-        "wires": [["get_all_status"]]
+        "y": 300,
+        "wires": [
+            [
+                "cmd_direto"
+            ]
+        ]
     },
     {
-        "id": "get_all_status",
-        "type": "function",
+        "id": "monitor_latency",
+        "type": "debug",
         "z": "multi_inv_tab",
-        "name": "Get All Status",
-        "func": "const inversores = flow.get('inversores') || {};\nconst gateway = flow.get('gateway_status');\n\nmsg.payload = {\n    gateway: gateway || { online: false },\n    inversores: Object.values(inversores),\n    timestamp: new Date().toISOString()\n};\n\nmsg.statusCode = 200;\nreturn msg;",
-        "outputs": 1,
-        "x": 370,
-        "y": 500,
-        "wires": [["api_response"]]
+        "name": "📊 Latência (ms)",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload._latency",
+        "targetType": "msg",
+        "statusVal": "payload._latency",
+        "statusType": "auto",
+        "x": 740,
+        "y": 160,
+        "wires": []
     },
     {
-        "id": "api_status_id",
+        "id": "api_cmd_post",
         "type": "http in",
         "z": "multi_inv_tab",
-        "name": "",
-        "url": "/api/inversor/:id/status",
-        "method": "get",
-        "x": 160,
-        "y": 560,
-        "wires": [["get_id_status"]]
-    },
-    {
-        "id": "get_id_status",
-        "type": "function",
-        "z": "multi_inv_tab",
-        "name": "Get ID Status",
-        "func": "const invId = parseInt(msg.req.params.id);\nconst inversores = flow.get('inversores') || {};\n\nif (invId < 1 || invId > 21) {\n    msg.statusCode = 400;\n    msg.payload = { erro: `ID inválido: ${invId}` };\n    return msg;\n}\n\nif (inversores[invId]) {\n    msg.payload = inversores[invId];\n    msg.statusCode = 200;\n} else {\n    msg.statusCode = 404;\n    msg.payload = { erro: `Inversor ${invId} não encontrado` };\n}\n\nreturn msg;",
-        "outputs": 1,
-        "x": 390,
-        "y": 560,
-        "wires": [["api_response"]]
-    },
-    {
-        "id": "api_cmd",
-        "type": "http in",
-        "z": "multi_inv_tab",
-        "name": "",
+        "name": "POST /cmd",
         "url": "/api/inversor/:id/cmd",
         "method": "post",
-        "x": 150,
-        "y": 620,
-        "wires": [["post_cmd"]]
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 110,
+        "y": 380,
+        "wires": [
+            [
+                "api_to_cmd"
+            ]
+        ]
     },
     {
-        "id": "post_cmd",
+        "id": "api_to_cmd",
         "type": "function",
         "z": "multi_inv_tab",
-        "name": "Post Command",
-        "func": "const invId = parseInt(msg.req.params.id);\nconst body = msg.payload;\n\nif (!body || !body.cmd) {\n    msg.statusCode = 400;\n    msg.payload = { erro: \"Campo 'cmd' obrigatório\" };\n    return [null, msg];\n}\n\nif (invId < 1 || invId > 21) {\n    msg.statusCode = 400;\n    msg.payload = { erro: `ID inválido: ${invId}` };\n    return [null, msg];\n}\n\n// Prepara para validação\nmsg.payload = {\n    inv: invId,\n    cmd: body.cmd,\n    value: body.value\n};\n\n// Marca para resposta HTTP\nmsg.isApiRequest = true;\n\nreturn [msg, null];",
-        "outputs": 2,
-        "x": 360,
-        "y": 620,
-        "wires": [["validacao_cmd"], ["api_response"]]
+        "name": "API→CMD",
+        "func": "// Converte requisição HTTP para formato interno\nconst id = parseInt(msg.req.params.id);\nconst {cmd, value} = msg.payload;\n\n// Timestamp para latência\nmsg._ts = Date.now();\nmsg.payload = {inv: id, cmd, value};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 280,
+        "y": 380,
+        "wires": [
+            [
+                "cmd_direto",
+                "api_response_ok"
+            ]
+        ]
+    },
+    {
+        "id": "api_response_ok",
+        "type": "function",
+        "z": "multi_inv_tab",
+        "name": "202 Accepted",
+        "func": "// SUGESTÃO 9: Responde imediatamente, não espera confirmação\nmsg.statusCode = 202;\nmsg.payload = {\n    status: \"accepted\",\n    message: \"Comando enviado, aguarde status do inversor\"\n};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 380,
+        "wires": [
+            [
+                "api_response"
+            ]
+        ]
     },
     {
         "id": "api_response",
         "type": "http response",
         "z": "multi_inv_tab",
-        "name": "API Response",
-        "x": 610,
-        "y": 560,
+        "name": "HTTP OUT",
+        "statusCode": "",
+        "headers": {},
+        "x": 640,
+        "y": 380,
         "wires": []
     },
     {
-        "id": "api_logs",
+        "id": "api_status_get",
         "type": "http in",
         "z": "multi_inv_tab",
-        "name": "",
-        "url": "/api/logs",
+        "name": "GET /status",
+        "url": "/api/inversor/:id/status",
         "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
         "x": 120,
-        "y": 680,
-        "wires": [["get_logs"]]
+        "y": 440,
+        "wires": [
+            [
+                "get_from_cache"
+            ]
+        ]
     },
     {
-        "id": "get_logs",
+        "id": "get_from_cache",
         "type": "function",
         "z": "multi_inv_tab",
-        "name": "Get Logs",
-        "func": "const logs = context.get('logs') || [];\nconst limit = parseInt(msg.req.query.limit) || 100;\n\nmsg.payload = {\n    logs: logs.slice(-limit),\n    total: logs.length,\n    timestamp: new Date().toISOString()\n};\n\nmsg.statusCode = 200;\nreturn msg;",
+        "name": "Cache (só leitura)",
+        "func": "// SUGESTÃO 7: Context usado SÓ em leitura de status\n// NÃO no caminho crítico de comando\n\nconst id = parseInt(msg.req.params.id);\nlet cache = global.get('inv_cache') || {};\n\nif (!cache[id]) {\n    // Lazy init\n    cache[id] = {\n        id: id,\n        online: false,\n        rodando: false,\n        frequencia: 0,\n        direcao: \"frente\"\n    };\n}\n\nmsg.payload = cache[id];\nmsg.statusCode = 200;\nreturn msg;",
         "outputs": 1,
-        "x": 340,
-        "y": 680,
-        "wires": [["api_response"]]
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 440,
+        "wires": [
+            [
+                "api_response"
+            ]
+        ]
     },
     {
-        "id": "api_erros",
-        "type": "http in",
-        "z": "multi_inv_tab",
-        "name": "",
-        "url": "/api/erros",
-        "method": "get",
-        "x": 120,
-        "y": 740,
-        "wires": [["get_erros"]]
-    },
-    {
-        "id": "get_erros",
+        "id": "update_cache",
         "type": "function",
         "z": "multi_inv_tab",
-        "name": "Get Erros",
-        "func": "const erros = context.get('erros') || [];\nconst limit = parseInt(msg.req.query.limit) || 50;\n\nmsg.payload = {\n    erros: erros.slice(-limit),\n    total: erros.length,\n    timestamp: new Date().toISOString()\n};\n\nmsg.statusCode = 200;\nreturn msg;",
-        "outputs": 1,
-        "x": 340,
-        "y": 740,
-        "wires": [["api_response"]]
+        "name": "Atualiza Cache",
+        "func": "// SUGESTÃO 6: Cache atualizado em fluxo SEPARADO\n// NÃO bloqueia comandos\n\nconst inv = msg.payload.inv;\nif (!inv) return null;\n\nlet cache = global.get('inv_cache') || {};\n\nif (!cache[inv]) {\n    cache[inv] = {id: inv};\n}\n\n// Atualiza apenas o campo recebido\nfor (let key in msg.payload) {\n    if (key !== 'inv' && key !== '_latency') {\n        cache[inv][key] = msg.payload[key];\n    }\n}\n\nglobal.set('inv_cache', cache);\n\nreturn null;",
+        "outputs": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 200,
+        "wires": []
     },
     {
-        "id": "init_flow",
+        "id": "init_cache",
         "type": "inject",
         "z": "multi_inv_tab",
-        "name": "Inicializar Cache",
+        "name": "Init Cache",
         "props": [],
         "repeat": "",
         "crontab": "",
         "once": true,
-        "x": 140,
-        "y": 800,
-        "wires": [["cache_init"]]
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 100,
+        "y": 500,
+        "wires": [
+            [
+                "do_init"
+            ]
+        ]
     },
     {
-        "id": "cache_init",
+        "id": "do_init",
         "type": "function",
         "z": "multi_inv_tab",
-        "name": "Init Cache",
-        "func": "// Inicializa cache de inversores\nconst inversores = {};\nfor (let i = 1; i <= 21; i++) {\n    inversores[i] = {\n        id: i,\n        online: false,\n        rodando: false,\n        frequencia: 0,\n        frequencia_setpoint: 0,\n        corrente: 0,\n        direcao: \"frente\",\n        ultima_atualizacao: 0\n    };\n}\n\nflow.set('inversores', inversores);\nflow.set('gateway_status', { online: false });\n\nnode.log('✅ Cache inicializado para 21 inversores');\n\nreturn null;",
+        "name": "Init 21 Inversores",
+        "func": "let cache = {};\nfor (let i = 1; i <= 21; i++) {\n    cache[i] = {\n        id: i,\n        online: false,\n        rodando: false,\n        frequencia: 0,\n        direcao: \"frente\"\n    };\n}\nglobal.set('inv_cache', cache);\nnode.log('✅ Cache inicializado (21 inversores)');\nreturn null;",
         "outputs": 0,
-        "x": 350,
-        "y": 800,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 290,
+        "y": 500,
         "wires": []
     }
 ]

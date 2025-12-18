@@ -44,6 +44,7 @@ const inverterStates = reactive({})
         corrente: 0,          // Matches 'corrente'
         direcao: 'frente',    // Matches 'direcao'
         ultima_atualizacao: 0, // Matches 'ultima_atualizacao'
+        latency: 0,            // New: Matches '_latency'
         
         // Frontend specific
         stats: { cmd: 0, read: 0, err: 0 },
@@ -89,10 +90,11 @@ const lastUpdate = computed({
   get: () => currentState.value.lastUpdate,
   set: (v) => currentState.value.lastUpdate = v
 })
-const systemState = computed({
-  get: () => currentState.value.systemState,
-  set: (v) => currentState.value.systemState = v
-})
+const latency = computed(() => currentState.value.latency)
+  const systemState = computed({
+    get: () => currentState.value.systemState,
+    set: (v) => currentState.value.systemState = v
+  })
 
 // Timers
 let reconnectTimer = null
@@ -302,8 +304,8 @@ export function useWebSocket() {
       return
     }
 
-    // 5. Handle Inverter Status Update (Default case)
-    // Check if it has 'inv' or 'id' field
+    // Handle Inverter Status Update (Dynamic Fields)
+    // Check if it has 'inv' field (New Flow standard)
     const id = data.inv || data.id
     if (id) {
       // Implicitly mark gateway as online if we receive inverter data
@@ -313,65 +315,82 @@ export function useWebSocket() {
       state.lastMessageTime = Date.now()
       updateLastUpdate(id)
 
-      // Map backend fields to state
-      if (data.online !== undefined) {
-        const isOnline = data.online === true || data.online === "1" || data.online === 1
-        state.isESP32Online = isOnline
-        state.online = isOnline // Keep raw field too
+      // Update Latency if present
+      if (data._latency !== undefined) {
+        state.latency = data._latency
+      }
+
+      // Dynamic field mapping
+      // The new flow sends: { inv: 1, [key]: value }
+      Object.keys(data).forEach(key => {
+        if (key === 'inv' || key === 'id' || key === '_latency') return
+
+        const value = data[key]
         
-        if (!isOnline) {
-          state.isRunning = false
-          if (id === activeInverterId.value) {
-            state.systemState = "Inversor Offline"
-          }
-        } else {
-          if (id === activeInverterId.value) {
-            state.systemState = "Inversor Online"
+        // Handle specific boolean/numeric conversions
+        if (key === 'online') {
+          const isOnline = value === true || value === "1" || value === 1
+          state.isESP32Online = isOnline
+          state.online = isOnline
+          
+          if (!isOnline) {
+            state.isRunning = false
+            if (id === activeInverterId.value) state.systemState = "Inversor Offline"
+          } else {
+            if (id === activeInverterId.value) state.systemState = "Inversor Online"
           }
         }
-      }
-
-      if (data.rodando !== undefined) {
-        const isRunning = data.rodando === true || data.rodando === "1" || data.rodando === 1
-        const wasRunning = state.isRunning
-        state.isRunning = isRunning
-        state.rodando = isRunning // Keep raw field
-        
-        if (isRunning !== wasRunning && state.isESP32Online && id === activeInverterId.value) {
-          addLog(isRunning ? `Inversor ${id} LIGADO` : `Inversor ${id} DESLIGADO`, "info")
+        else if (key === 'rodando') {
+          const isRunning = value === true || value === "1" || value === 1
+          const wasRunning = state.isRunning
+          state.isRunning = isRunning
+          state.rodando = isRunning
+          
+          if (isRunning !== wasRunning && state.isESP32Online && id === activeInverterId.value) {
+            addLog(isRunning ? `Inversor ${id} LIGADO` : `Inversor ${id} DESLIGADO`, "info")
+          }
         }
-      }
-
-      if (data.frequencia !== undefined) {
-        state.currentFreq = Number(data.frequencia)
-        state.frequencia = state.currentFreq
-      }
-
-      if (data.frequencia_setpoint !== undefined) {
-        state.setpointFreq = Number(data.frequencia_setpoint)
-        state.frequencia_setpoint = state.setpointFreq
-      }
-
-      if (data.corrente !== undefined) {
-        state.corrente = Number(data.corrente)
-      }
-
-      if (data.direcao !== undefined) {
-        const dir = String(data.direcao).toLowerCase()
-        state.direction = dir === "frente" ? "Frente" : "Reverso"
-        state.direcao = dir
-      }
+        else if (key === 'frequencia') {
+          state.currentFreq = Number(value)
+          state.frequencia = state.currentFreq
+        }
+        else if (key === 'frequencia_setpoint') {
+          state.setpointFreq = Number(value)
+          state.frequencia_setpoint = state.setpointFreq
+        }
+        else if (key === 'corrente') {
+          state.corrente = Number(value)
+        }
+        else if (key === 'direcao') {
+          const dir = String(value).toLowerCase()
+          state.direction = dir === "frente" ? "Frente" : "Reverso"
+          state.direcao = dir
+        }
+        else {
+          // Generic fallback for other fields
+          state[key] = value
+        }
+      })
       
       return
     }
 
-    // Legacy/Fallback: Topic based handling (if needed)
-    if (data.topic) {
-      // ... keep existing logic if strictly necessary, but Node-RED seems to send objects now
-      // We can leave a minimal fallback or remove it. 
-      // Given the Node-RED flow, the above object handling should cover it.
+    // Handle Gateway Heartbeat (Raw MQTT JSON or transformed)
+    // If it has 'uptime' but NO 'inv', it's likely gateway stats
+    if (data.uptime !== undefined && !data.inv) {
+       isGatewayOnline.value = true
+       const activeState = currentState.value
+       activeState.uptime = data.uptime
+       activeState.systemState = "Gateway Online"
+       
+       if (data.free_heap && data.free_heap < 50000) {
+         // Low heap warning
+       }
+       return
     }
-  }
+    
+    // Legacy support (keep existing checks if they don't conflict)
+    // 1. Handle Error Messages
 
   const connect = () => {
     if (ws.value && (ws.value.readyState === WebSocket.CONNECTING || ws.value.readyState === WebSocket.OPEN)) {

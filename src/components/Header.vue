@@ -12,8 +12,15 @@ const props = defineProps({
   }
 })
 
-const { isConnected, isGatewayOnline } = useWebSocket()
+const { isConnected, isGatewayOnline, activeInverterId, inverterStates } = useWebSocket()
 const emit = defineEmits(['open-config', 'navigate'])
+
+const currentLatency = computed(() => {
+  if (props.view === 'inverter') {
+    return inverterStates[activeInverterId.value]?.latency || 0
+  }
+  return 0
+})
 </script>
 
 <template>
@@ -31,13 +38,14 @@ const emit = defineEmits(['open-config', 'navigate'])
         </div>
         <div class="brand-text">
           <h1>JAMEK</h1>
-          <span class="badge">v4.1</span>
+          <span class="badge">v5.4</span>
         </div>
       </div>
 
       <!-- Context Title (Inverter View) -->
       <div class="context-title" v-else>
         <h2>{{ title }}</h2>
+        <span v-if="currentLatency > 0" class="latency-badge">{{ currentLatency }}ms</span>
       </div>
     </div>
     
@@ -96,6 +104,16 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.latency-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: rgba(59, 130, 246, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
 }
 
 .brand-text {
