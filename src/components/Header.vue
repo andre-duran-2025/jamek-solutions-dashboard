@@ -1,32 +1,60 @@
 <script setup>
 import { useWebSocket } from '@/composables/useWebSocket'
 
-const { isConnected, isESP32Online, reconnectAttempts } = useWebSocket()
-const emit = defineEmits(['open-config'])
+const props = defineProps({
+  view: {
+    type: String,
+    default: 'dashboard'
+  },
+  title: {
+    type: String,
+    default: ''
+  }
+})
+
+const { isConnected, isESP32Online } = useWebSocket()
+const emit = defineEmits(['open-config', 'navigate'])
 </script>
 
 <template>
   <header>
-    <div class="brand">
-      <strong>JAMEK SOLUTIONS</strong>
-      <span>Automação e Sistemas Industriais - v4.1 Node-RED</span>
+    <div class="left-section">
+      <!-- Back Button (Only in Inverter View) -->
+      <button v-if="view === 'inverter'" class="btn-back" @click="emit('navigate', 'dashboard')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      </button>
+
+      <!-- Brand / Logo (Always visible or contextual) -->
+      <div class="brand" v-if="view === 'dashboard'">
+        <div class="logo-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M12 12l4-4m-4 4l-4 4"/></svg>
+        </div>
+        <div class="brand-text">
+          <h1>JAMEK</h1>
+          <span class="badge">v4.1</span>
+        </div>
+      </div>
+
+      <!-- Context Title (Inverter View) -->
+      <div class="context-title" v-else>
+        <h2>{{ title }}</h2>
+      </div>
     </div>
     
-    <div class="connection-status">
-      <div class="ws-indicator" :class="{ connected: isConnected, disconnected: !isConnected }">
-        <span class="dot"></span>
-        <span class="text">{{ isConnected ? 'Node-RED OK' : 'Desconectado' }}</span>
-        <span v-if="reconnectAttempts > 0" class="reconnect-badge">{{ reconnectAttempts }}</span>
+    <div class="actions">
+      <div class="status-group">
+        <div class="status-item" :class="{ active: isConnected }">
+          <span class="dot"></span>
+          <span class="label">Server</span>
+        </div>
+        <div class="status-item" :class="{ active: isESP32Online }">
+          <span class="dot"></span>
+          <span class="label">ESP32</span>
+        </div>
       </div>
       
-      <div class="ws-indicator" :class="{ connected: isESP32Online, disconnected: !isESP32Online }">
-        <span class="dot"></span>
-        <span class="text">{{ isESP32Online ? 'ESP32 OK' : 'ESP32 Offline' }}</span>
-      </div>
-      
-      <button class="config-btn" @click="emit('open-config')">
-        <span>⚙️</span>
-        <span>Config</span>
+      <button class="btn-icon" @click="emit('open-config')" title="Configurações">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
       </button>
     </div>
   </header>
@@ -34,123 +62,150 @@ const emit = defineEmits(['open-config'])
 
 <style scoped>
 header {
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(18, 26, 47, 0.95);
-  backdrop-filter: blur(10px);
-  flex-shrink: 0;
+  height: 64px;
+  padding: 0 24px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
+  background: var(--surface); /* Changed to surface for consistency */
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  transition: var(--transition);
 }
 
-.brand strong {
-  font-size: 17px;
-  letter-spacing: 1.5px;
-  font-weight: 700;
-  display: block;
-  color: var(--text);
-}
-
-.brand span {
-  font-size: 10px;
-  color: var(--muted);
-  opacity: 0.8;
-  letter-spacing: 0.5px;
-}
-
-.config-btn {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.2s;
+.left-section {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 16px;
 }
 
-.config-btn:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: var(--primary);
-}
-
-.connection-status {
+.brand {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
 }
 
-.ws-indicator {
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--primary);
+  color: white;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-text {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.3s;
-  position: relative;
 }
 
-.ws-indicator .dot {
+h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  background: var(--surface-active);
+  color: var(--text-muted);
+  border-radius: 4px;
+}
+
+.btn-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.btn-back:hover {
+  background: var(--surface-hover);
+  color: var(--text-main);
+}
+
+.context-title h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.status-group {
+  display: flex;
+  gap: 16px;
+  padding-right: 24px;
+  border-right: 1px solid var(--border);
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--muted);
-  transition: all 0.3s;
+  background: var(--danger);
+  transition: var(--transition);
 }
 
-.ws-indicator.connected .dot {
-  background: var(--green);
-  box-shadow: 0 0 8px var(--green);
-  animation: pulse 2s infinite;
+.status-item.active .dot {
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success-light);
 }
 
-.ws-indicator.disconnected .dot {
-  background: var(--red);
-  animation: blink 1s infinite;
+.status-item.active {
+  color: var(--text-main);
 }
 
-.reconnect-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: var(--yellow);
-  color: #000;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 10px;
-  min-width: 18px;
-  text-align: center;
+.btn-icon {
+  color: var(--text-muted);
+  padding: 8px;
+  border-radius: 8px;
+  transition: var(--transition);
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+.btn-icon:hover {
+  background: var(--surface-hover);
+  color: var(--text-main);
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-@media (max-width: 768px) {
+@media (max-width: 600px) {
   header {
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px 16px;
+    padding: 0 16px;
   }
   
-  .connection-status {
-    flex-wrap: wrap;
-    justify-content: center;
+  .status-group {
+    display: none;
+  }
+  
+  .badge {
+    display: none;
   }
 }
 </style>

@@ -23,45 +23,45 @@ const { toasts } = useToast()
 <style scoped>
 .toast-container {
   position: fixed;
-  top: 24px;
-  right: 24px;
+  top: 1.5rem;
+  right: 1.5rem;
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.75rem;
   max-width: 400px;
 }
 
 .toast {
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px 20px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-lg);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.75rem;
   min-width: 320px;
 }
 
 .toast-indicator {
   width: 4px;
-  height: 40px;
+  height: 2.5rem;
   border-radius: 2px;
   flex-shrink: 0;
 }
 
 .toast-message {
   flex: 1;
-  font-size: 13px;
+  font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text);
+  color: var(--text-main);
 }
 
-.toast.success .toast-indicator { background: var(--green); }
-.toast.error .toast-indicator { background: var(--red); }
-.toast.warning .toast-indicator { background: var(--yellow); }
-.toast.info .toast-indicator { background: var(--primary); }
+.toast.success .toast-indicator { background: var(--success); }
+.toast.error .toast-indicator { background: var(--danger); }
+.toast.warning .toast-indicator { background: var(--warning); }
+.toast.info .toast-indicator { background: var(--info); }
 
 .toast-enter-active,
 .toast-leave-active {

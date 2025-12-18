@@ -55,92 +55,87 @@ const { formattedUptime, direction, systemState, lastUpdate, stats } = useWebSoc
 
 <style scoped>
 .card {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
   border: 1px solid var(--border);
   position: relative;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .card:hover {
-  border-color: rgba(37, 99, 235, 0.3);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
 .card h3 {
-  margin: 0 0 12px 0;
-  font-size: 10px;
-  color: var(--muted);
+  margin: 0 0 1rem 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1.2px;
+  letter-spacing: 0.05em;
   font-weight: 600;
 }
 
 .mini-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 0.75rem;
 }
 
 .mini-stat {
-  background: rgba(255,255,255,0.02);
-  padding: 12px;
-  border-radius: 8px;
+  background: var(--bg);
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .mini-stat:hover {
-  background: rgba(255,255,255,0.04);
+  border-color: var(--border-light);
 }
 
 .mini-stat-label {
-  font-size: 9px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 5px;
-  font-weight: 600;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
 }
 
 .mini-stat-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  font-family: 'Inter', monospace;
 }
 
-.mini-stat-value.highlight { color: var(--green); }
-.mini-stat-value.warning { color: var(--yellow); }
-.mini-stat-value.error { color: var(--red); }
+.mini-stat-value.highlight { color: var(--success); }
+.mini-stat-value.error { color: var(--danger); }
+.mini-stat-value.warning { color: var(--warning); }
 
 .perf-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  margin-top: 10px;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
 }
 
 .perf-item {
   text-align: center;
-  padding: 8px;
-  background: rgba(0,0,0,0.2);
-  border-radius: 6px;
-  border: 1px solid var(--border);
 }
 
 .perf-item-label {
-  font-size: 8px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 3px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 0.125rem;
 }
 
 .perf-item-value {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  font-family: 'Inter', monospace;
 }
 </style>

@@ -28,45 +28,46 @@ watch(logs, () => {
 
 <style scoped>
 .card {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
   border: 1px solid var(--border);
   position: relative;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: var(--transition);
 }
 
 .card:hover {
-  border-color: rgba(37, 99, 235, 0.3);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
 .card h3 {
-  margin: 0 0 12px 0;
-  font-size: 10px;
-  color: var(--muted);
+  margin: 0 0 1rem 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1.2px;
+  letter-spacing: 0.05em;
   font-weight: 600;
 }
 
 .log-container {
   max-height: 140px;
   overflow-y: auto;
-  font-family: 'SF Mono', 'Courier New', monospace;
-  font-size: 10px;
-  background: rgba(0,0,0,0.3);
-  padding: 10px;
-  border-radius: 8px;
+  font-family: 'Inter', monospace;
+  font-size: 0.75rem;
+  background: var(--bg);
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
 }
 
 .log-entry {
-  padding: 5px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  padding: 0.375rem 0;
+  border-bottom: 1px solid var(--border);
   display: flex;
-  gap: 10px;
+  gap: 0.75rem;
   align-items: center;
   animation: fadeIn 0.3s;
 }
@@ -81,18 +82,19 @@ watch(logs, () => {
 }
 
 .log-time {
-  color: var(--muted);
-  min-width: 70px;
+  color: var(--text-muted);
+  min-width: 60px;
   font-weight: 500;
+  font-size: 0.7rem;
 }
 
 .log-message {
-  color: var(--text);
+  color: var(--text-main);
   flex: 1;
 }
 
-.log-entry.info .log-message { color: var(--primary); }
-.log-entry.success .log-message { color: var(--green); }
-.log-entry.error .log-message { color: var(--red); }
-.log-entry.warning .log-message { color: var(--yellow); }
+.log-entry.info .log-message { color: var(--info); }
+.log-entry.success .log-message { color: var(--success); }
+.log-entry.error .log-message { color: var(--danger); }
+.log-entry.warning .log-message { color: var(--warning); }
 </style>

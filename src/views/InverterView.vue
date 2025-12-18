@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { useWebSocket } from '@/composables/useWebSocket'
 import ConfigModal from '@/components/ConfigModal.vue'
 import AlertBanner from '@/components/AlertBanner.vue'
@@ -18,126 +18,100 @@ const emit = defineEmits(['back', 'open-config'])
 
 <template>
   <div class="inverter-view">
-    <div class="nav-header">
-      <button class="btn-back" @click="emit('back')">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
-        Voltar
-      </button>
-      <h2>Inversor {{ String(activeInverterId).padStart(2, '0') }}</h2>
-    </div>
-
     <ConfigModal :isOpen="showConfig" @close="showConfig = false" />
     
-    <main class="main">
-      <AlertBanner />
-      
-      <section class="grid">
-        <InverterStatus />
+    <main class="main-content">
+      <div class="container">
+        <AlertBanner />
         
-        <FrequencyCard 
-          title="Frequência de Saída" 
-          :value="currentFreq" 
-          label="Saída Real"
-        />
-        
-        <FrequencyCard 
-          title="Frequência Programada" 
-          :value="setpointFreq" 
-          label="Setpoint"
-        />
-        
-        <Controls />
-        
-        <FrequencySlider />
-        
-        <SystemStats />
-        
-        <EventLog />
-      </section>
+        <div class="dashboard-grid">
+          <!-- Top Row: Status & Metrics -->
+          <div class="status-section">
+            <InverterStatus />
+          </div>
+          
+          <div class="metrics-section">
+            <FrequencyCard 
+              title="Frequência Real" 
+              :value="currentFreq" 
+              variant="primary"
+            />
+            <FrequencyCard 
+              title="Setpoint" 
+              :value="setpointFreq" 
+              variant="secondary"
+            />
+          </div>
+          
+          <!-- Middle: Controls -->
+          <div class="controls-section">
+            <Controls />
+          </div>
+          
+          <!-- Bottom: Slider & Logs -->
+          <div class="slider-section">
+            <FrequencySlider />
+          </div>
+          
+          <div class="info-section">
+            <SystemStats />
+            <EventLog />
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
 
 <style scoped>
 .inverter-view {
-  animation: slideIn 0.3s ease;
-  min-height: 100vh;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
+  background: var(--bg);
 }
 
-.nav-header {
-  display: flex;
-  align-items: center;
-  padding: 16px 24px;
-  background: rgba(18, 26, 47, 0.8);
-  border-bottom: 1px solid var(--border);
-  gap: 16px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  backdrop-filter: blur(10px);
-}
-
-.btn-back {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.btn-back:hover {
-  background: rgba(255,255,255,0.05);
-  border-color: var(--primary);
-}
-
-.nav-header h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--primary);
-}
-
-.main {
+.main-content {
   flex: 1;
-  padding: 24px;
+  padding: 32px 24px;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
-  max-width: 1400px;
+.container {
+  max-width: 1000px;
   margin: 0 auto;
 }
 
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
+.dashboard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.metrics-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.info-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
 }
 
 @media (max-width: 768px) {
-  .nav-header {
-    padding: 12px 16px;
+  .main-content {
+    padding: 20px 16px;
   }
   
-  .main {
-    padding: 16px;
-  }
-  
-  .grid {
+  .metrics-section,
+  .info-section {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 16px;
+  }
+  
+  .dashboard-grid {
+    gap: 16px;
   }
 }
 </style>

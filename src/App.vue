@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useWebSocket } from '@/composables/useWebSocket'
 import Header from '@/components/Header.vue'
 import ConfigModal from '@/components/ConfigModal.vue'
@@ -7,9 +7,15 @@ import ToastContainer from '@/components/ToastContainer.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import InverterView from '@/views/InverterView.vue'
 
-const { connect, disconnect } = useWebSocket()
+const { connect, disconnect, activeInverterId } = useWebSocket()
 const showConfig = ref(false)
 const currentView = ref('dashboard') // dashboard | inverter
+
+const headerTitle = computed(() => {
+  return currentView.value === 'inverter' 
+    ? `Inversor ${String(activeInverterId.value).padStart(2, '0')}`
+    : 'JAMEK'
+})
 
 onMounted(() => {
   connect()
@@ -48,7 +54,12 @@ const navigateToDashboard = () => {
   <ToastContainer />
   <ConfigModal :isOpen="showConfig" @close="showConfig = false" />
   
-  <Header @open-config="showConfig = true" />
+  <Header 
+    :view="currentView" 
+    :title="headerTitle"
+    @open-config="showConfig = true" 
+    @navigate="navigateToDashboard"
+  />
   
   <div class="content-wrapper">
     <transition name="fade" mode="out-in">
@@ -58,7 +69,6 @@ const navigateToDashboard = () => {
       />
       <InverterView 
         v-else 
-        @back="navigateToDashboard" 
         @open-config="showConfig = true"
       />
     </transition>

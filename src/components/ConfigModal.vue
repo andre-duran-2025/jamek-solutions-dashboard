@@ -72,85 +72,67 @@ const saveConfig = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.8);
+  background: rgba(15, 23, 42, 0.8); /* Slate-900 with opacity */
   z-index: 9999;
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(4px);
+  transition: var(--transition);
 }
 
 .modal-overlay.show {
   display: flex;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .modal {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 24px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
   max-width: 500px;
   width: 90%;
   border: 1px solid var(--border);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  box-shadow: var(--shadow-lg);
+  transform: scale(0.95);
+  opacity: 0;
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 .modal h2 {
-  margin-bottom: 20px;
-  color: var(--text);
-  font-size: 20px;
+  margin-bottom: 1.5rem;
+  color: var(--text-main);
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 1.25rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: var(--muted);
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
-.form-group input[type="text"],
-.form-group input[type="number"] {
-  width: 100%;
-  padding: 10px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  font-size: 14px;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-
 .modal-actions {
+  margin-top: 2rem;
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.modal-actions button {
-  flex: 1;
-  padding: 10px;
-  border-radius: 6px;
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: white;
-}
-
-.btn-secondary {
-  background: rgba(255,255,255,0.05);
-  color: var(--text);
-  border: 1px solid var(--border);
+  justify-content: flex-end;
+  gap: 1rem;
 }
 </style>

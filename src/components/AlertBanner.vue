@@ -15,26 +15,27 @@ const { alertMessage, alertType, showAlertBanner } = useWebSocket()
 
 <style scoped>
 .alert-banner {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid var(--red);
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
+  background: var(--danger-light);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.75rem;
+  color: var(--text-main);
 }
 
 .alert-banner.warning {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: var(--yellow);
+  background: var(--warning-light);
+  border-color: var(--warning);
 }
 
 .alert-banner .icon {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
-  width: 22px;
-  height: 22px;
+  width: 1.5rem;
+  height: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -45,7 +46,7 @@ const { alertMessage, alertType, showAlertBanner } = useWebSocket()
 
 .alert-banner .message {
   flex: 1;
-  font-size: 12px;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
