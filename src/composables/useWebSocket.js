@@ -49,7 +49,8 @@ const inverterStates = reactive({})
         // Frontend specific
         stats: { cmd: 0, read: 0, err: 0 },
         systemState: 'Aguardando...',
-        lastMessageTime: 0
+        lastMessageTime: 0,
+        ignoreUpdatesUntil: 0 // New: ignore stale server updates after local commands
       }
     }
     return inverterStates[id]
@@ -327,6 +328,12 @@ export function useWebSocket() {
 
         const value = data[key]
         
+        // Skip updates if we are in "ignore mode" for this inverter (debounce server echo)
+        // BUT allow "online" status updates as they are critical
+        if (state.ignoreUpdatesUntil > Date.now() && key !== 'online') {
+            return
+        }
+        
         // Handle specific boolean/numeric conversions
         if (key === 'online') {
           const isOnline = value === true || value === "1" || value === 1
@@ -512,15 +519,18 @@ export function useWebSocket() {
       state.isRunning = true
       state.rodando = true
       state.systemState = "Inversor Online"
+      state.ignoreUpdatesUntil = Date.now() + 1500 // Ignore server echo for 1.5s
     } else if (cmd === 'stop') {
       state.isRunning = false
       state.rodando = false
       state.systemState = "Inversor Parado"
+      state.ignoreUpdatesUntil = Date.now() + 1500
     } else if (cmd === 'direcao') {
       // Toggle locally for instant feedback
       const newDir = state.direcao === 'frente' ? 'tras' : 'frente'
       state.direcao = newDir
       state.direction = newDir === 'frente' ? 'Frente' : 'Reverso'
+      state.ignoreUpdatesUntil = Date.now() + 1500
     } else if (cmd === 'freq' && value !== null) {
       state.setpointFreq = Number(value)
       state.frequencia_setpoint = Number(value)
