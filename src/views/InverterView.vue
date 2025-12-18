@@ -38,9 +38,9 @@ const {
 const { navigateTo } = useNavigation();
 const { showToast } = useToast();
 
-// Local state for sliders to prevent jumping while dragging
+// Local state for sliders
 const localFreq = ref(0);
-const isDragging = ref(false);
+const isUserInteracting = ref(false);
 
 const inverter = computed(() => {
   const state = inverterStates[activeInverterId.value] || {};
@@ -58,44 +58,41 @@ const inverter = computed(() => {
   };
 });
 
-// Sync local slider with remote setpoint when not dragging
+// Sync local slider with remote setpoint when user is not interacting
 watch(() => inverter.value.setpoint, (newVal) => {
-  if (!isDragging.value) {
+  if (!isUserInteracting.value) {
     localFreq.value = newVal;
   }
 }, { immediate: true });
 
 const handleStart = () => {
   sendCommand('start');
-  showToast(`Comando de partida enviado para ${inverter.value.name}`, 'success');
+  showToast(`Iniciando ${inverter.value.name}...`, 'success');
 };
 
 const handleStop = () => {
   sendCommand('stop');
-  showToast(`Comando de parada enviado para ${inverter.value.name}`, 'info');
+  showToast(`Parando ${inverter.value.name}...`, 'info');
 };
 
 const handleReset = () => {
   sendCommand('reset');
-  showToast(`Reset de falha enviado para ${inverter.value.name}`, 'warning');
+  showToast(`Reset enviado`, 'warning');
 };
 
 const handleDirection = () => {
   sendCommand('direcao');
-  showToast(`Comando de inversão de rotação enviado`, 'info');
+  showToast(`Invertendo rotação...`, 'info');
 };
 
-const handleSliderRelease = () => {
-  isDragging.value = false;
-  // Send command only when user releases the slider
+const onSliderInput = () => {
+  isUserInteracting.value = true;
+};
+
+const onSliderChange = () => {
+  isUserInteracting.value = false;
   sendCommand('freq', Number(localFreq.value));
-};
-
-const handleFrequencyChange = (event) => {
-  // Fallback for keyboard input or other changes not caught by mouseup
-  const val = Number(event.target.value);
-  localFreq.value = val;
-  sendCommand('freq', val);
+  showToast(`Frequência ajustada para ${localFreq.value} Hz`, 'info');
 };
 
 const emit = defineEmits(['open-config']);
@@ -228,10 +225,8 @@ const emit = defineEmits(['open-config']);
                 max="60" 
                 step="1"
                 v-model="localFreq"
-                @mousedown="isDragging = true"
-                @touchstart="isDragging = true"
-                @mouseup="handleSliderRelease"
-                @touchend="handleSliderRelease"
+                @input="onSliderInput"
+                @change="onSliderChange"
                 class="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
               />
             </div>

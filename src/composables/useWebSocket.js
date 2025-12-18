@@ -495,9 +495,13 @@ export function useWebSocket() {
   }
 
   const sendCommand = (cmd, value = null) => {
+    // Check if WS is open
     if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
-      addLog("Erro: Desconectado", "error")
-      showToast("Sem conexão com o servidor", "error")
+      console.warn("⚠️ WebSocket não está pronto. Tentando reconectar...")
+      addLog("Erro: Desconectado. Tentando reconectar...", "error")
+      showToast("Conexão perdida. Tentando reconectar...", "error")
+      // Force immediate reconnect attempt
+      connect()
       return false
     }
     
@@ -513,13 +517,13 @@ export function useWebSocket() {
       state.rodando = false
       state.systemState = "Inversor Parado"
     } else if (cmd === 'direcao') {
+      // Toggle locally for instant feedback
       const newDir = state.direcao === 'frente' ? 'tras' : 'frente'
       state.direcao = newDir
       state.direction = newDir === 'frente' ? 'Frente' : 'Reverso'
     } else if (cmd === 'freq' && value !== null) {
       state.setpointFreq = Number(value)
       state.frequencia_setpoint = Number(value)
-      // We don't update currentFreq yet, waiting for feedback
     }
 
     // Include ID in the message for backend routing
@@ -535,23 +539,21 @@ export function useWebSocket() {
       return true
     } catch (error) {
       console.error("Erro ao enviar:", error)
-      // Revert optimistic update if needed? 
-      // For now, next heartbeat will fix it, or user tries again.
+      addLog("Falha ao enviar comando", "error")
       return false
     }
   }
 
   // Heartbeat check interval
   setInterval(() => {
-    const state = currentState.value
-    if (state.lastHeartbeatTime > 0) {
-      const age = Date.now() - state.lastHeartbeatTime
-      if (age > CONFIG.heartbeatMaxAge) {
-        console.warn("⚠️ Heartbeat muito antigo")
-        showAlert("ESP32 pode estar offline", "warning")
-      }
+    // Aggressive ping to keep connection alive and detect failures fast
+    if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+      ws.value.send(JSON.stringify({ cmd: 'ping', timestamp: Date.now() }))
+    } else if (ws.value && ws.value.readyState === WebSocket.CLOSED) {
+      // If closed but not detected by onclose logic yet
+      connect()
     }
-  }, 10000)
+  }, 5000) // 5 seconds interval for fast failure detection
 
   return {
     connect,
