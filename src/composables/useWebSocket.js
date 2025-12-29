@@ -109,10 +109,21 @@ export function useWebSocket() {
     // Use configured host and port
     const host = serverConfig.value.host || '192.168.2.24'
     const port = serverConfig.value.port || 1880
-    const protocol = serverConfig.value.useSSL ? 'wss://' : 'ws://'
+    
+    // Always force WS:// for local IPs to avoid mixed content issues or SSL errors
+    // unless explicitly configured otherwise via override
+    let protocol = serverConfig.value.useSSL ? 'wss://' : 'ws://'
     
     // Clean host from any protocol prefix
     const cleanHost = host.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '')
+    
+    // Auto-downgrade to ws:// if using local IP, even if SSL is checked
+    if (cleanHost.startsWith('192.168.') || cleanHost.startsWith('10.') || cleanHost.startsWith('localhost') || cleanHost.startsWith('127.')) {
+        if (protocol === 'wss://') {
+            console.warn("⚠️ Detectado IP local. Forçando protocolo ws:// para evitar erros de SSL.")
+            protocol = 'ws://'
+        }
+    }
     
     return `${protocol}${cleanHost}:${port}/api/ws/inversor`
   }
