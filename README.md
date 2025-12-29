@@ -8,7 +8,7 @@ Este projeto é uma versão modernizada do dashboard de controle industrial, mig
 -   **Vite**: Build tool de nova geração, extremamente rápido.
 -   **PWA**: Suporte offline, instalação e cache inteligente.
 -   **CSS Variables**: Para theming e fácil customização.
--   **WebSocket**: Comunicação em tempo real com Node-RED/ESP32.
+-   **WebSocket**: Comunicação em tempo real com Node-RED.
 
 ## 📦 Instalação
 

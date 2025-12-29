@@ -29,7 +29,7 @@ const showAlertBanner = ref(false)
 const activeInverterId = ref(1) // Default to 1
 
 // Per-Inverter State
-// Structure: { [id]: { isRunning, isESP32Online, currentFreq, ... } }
+// Structure: { [id]: { isRunning, isDeviceOnline, currentFreq, ... } }
 const inverterStates = reactive({})
 
 // Initialize state for an inverter
@@ -66,9 +66,9 @@ const isRunning = computed({
   get: () => currentState.value.isRunning,
   set: (v) => currentState.value.isRunning = v
 })
-const isESP32Online = computed({
-  get: () => currentState.value.isESP32Online,
-  set: (v) => currentState.value.isESP32Online = v
+const isDeviceOnline = computed({
+  get: () => currentState.value.isDeviceOnline,
+  set: (v) => currentState.value.isDeviceOnline = v
 })
 const currentFreq = computed({
   get: () => currentState.value.currentFreq,
@@ -106,34 +106,15 @@ let currentReconnectInterval = CONFIG.reconnectInterval
 export function useWebSocket() {
   
   const getWebSocketUrl = () => {
-    // Determine host: prefer config, fallback to window.location.host
-    let host = serverConfig.host
+    // Use configured host and port
+    const host = serverConfig.value.host || '192.168.2.24'
+    const port = serverConfig.value.port || 1880
+    const protocol = serverConfig.value.useSSL ? 'wss://' : 'ws://'
     
-    // If config is missing or localhost (development default)
-    if (!host || host === 'localhost') {
-       // If running on production dashboard, use production API
-       if (window.location.hostname === 'painel.jamek.com.br') {
-         host = 'api.jamek.com.br'
-       } else {
-         // Otherwise try current host (self-hosted) or default to api
-         host = window.location.host || 'api.jamek.com.br'
-       }
-    }
-    
-    // Auto-detect protocol based on current page if not explicitly set, 
-    // but prioritize config if it matches the security context
-    const isSecure = window.location.protocol === 'https:'
-    let protocol = serverConfig.useSSL ? 'wss://' : 'ws://'
-    
-    // Force WSS if page is loaded via HTTPS to avoid Mixed Content errors
-    if (isSecure && protocol === 'ws://') {
-      console.warn("Forcing WSS because page is loaded via HTTPS")
-      protocol = 'wss://'
-    }
-
     // Clean host from any protocol prefix
     const cleanHost = host.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '')
-    return `${protocol}${cleanHost}/api/ws/inversor`
+    
+    return `${protocol}${cleanHost}:${port}/api/ws/inversor`
   }
 
   const setActiveInverter = (id) => {
@@ -288,7 +269,7 @@ export function useWebSocket() {
       if (data.uptime) activeState.uptime = data.uptime
       
       if (!isOnline) {
-        showAlert("Gateway ESP32 Offline", "error")
+        showAlert("Sistema Offline", "error")
       } else {
         // If we were showing offline alert, hide it
         if (alertMessage.value.includes("Offline")) hideAlert()
@@ -337,7 +318,7 @@ export function useWebSocket() {
         // Handle specific boolean/numeric conversions
         if (key === 'online') {
           const isOnline = value === true || value === "1" || value === 1
-          state.isESP32Online = isOnline
+          state.isDeviceOnline = isOnline
           state.online = isOnline
           
           if (!isOnline) {
@@ -353,7 +334,7 @@ export function useWebSocket() {
           state.isRunning = isRunning
           state.rodando = isRunning
           
-          if (isRunning !== wasRunning && state.isESP32Online && id === activeInverterId.value) {
+          if (isRunning !== wasRunning && state.isDeviceOnline && id === activeInverterId.value) {
             addLog(isRunning ? `Inversor ${id} LIGADO` : `Inversor ${id} DESLIGADO`, "info")
           }
         }
@@ -590,7 +571,7 @@ export function useWebSocket() {
     inverterStates,
     isConnected,
     isGatewayOnline,
-    isESP32Online,
+    isDeviceOnline,
     isRunning,
     reconnectAttempts,
     logs,

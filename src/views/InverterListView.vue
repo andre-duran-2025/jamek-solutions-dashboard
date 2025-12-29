@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import StatusBadge from '@/components/equipment/StatusBadge.vue';
 
 const { navigateTo } = useNavigation();
-const { activeInverterId, inverterStates, isESP32Online } = useWebSocket();
+const { activeInverterId, inverterStates, isDeviceOnline } = useWebSocket();
 
 // Mock list of inverters
 const inverters = Array.from({ length: 21 }, (_, i) => i + 1);
@@ -22,7 +22,7 @@ const getInverterStatus = (id) => {
   const state = inverterStates[id];
   if (!state) return 'offline';
   // If we have state, check if online
-  if (!isESP32Online.value) return 'offline';
+  if (!isDeviceOnline.value) return 'offline';
   return state.online ? 'online' : 'offline'; // Simplified
 };
 

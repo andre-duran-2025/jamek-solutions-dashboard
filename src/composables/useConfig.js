@@ -1,9 +1,9 @@
 import { ref, watch } from 'vue'
 
 const defaultConfig = {
-  host: "api.jamek.com.br",
+  host: "192.168.2.24",
   port: 1880,
-  useSSL: true
+  useSSL: false
 }
 
 const serverConfig = ref({ ...defaultConfig })

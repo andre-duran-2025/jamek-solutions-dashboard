@@ -31,7 +31,7 @@ const {
   setpointFreq, 
   sendCommand, 
   isRunning,
-  isESP32Online,
+  isDeviceOnline,
   isConnected
 } = useWebSocket();
 
@@ -46,7 +46,7 @@ const inverter = computed(() => {
   const state = inverterStates[activeInverterId.value] || {};
   return {
     name: `Inversor ${String(activeInverterId.value).padStart(2, '0')}`,
-    status: isESP32Online.value ? (isRunning.value ? 'online' : 'offline') : 'offline', 
+    status: isDeviceOnline.value ? (isRunning.value ? 'online' : 'offline') : 'offline', 
     running: isRunning.value,
     frequency: currentFreq.value || 0,
     setpoint: setpointFreq.value || 0,
@@ -67,22 +67,22 @@ watch(() => inverter.value.setpoint, (newVal) => {
 
 const handleStart = () => {
   sendCommand('start');
-  // showToast(`Iniciando ${inverter.value.name}...`, 'success');
+  showToast(`Iniciando ${inverter.value.name}...`, 'success');
 };
 
 const handleStop = () => {
   sendCommand('stop');
-  // showToast(`Parando ${inverter.value.name}...`, 'info');
+  showToast(`Parando ${inverter.value.name}...`, 'info');
 };
 
 const handleReset = () => {
   sendCommand('reset');
-  // showToast(`Reset enviado`, 'warning');
+  showToast(`Reset enviado`, 'warning');
 };
 
 const handleDirection = () => {
   sendCommand('direcao');
-  // showToast(`Invertendo rotação...`, 'info');
+  showToast(`Invertendo rotação...`, 'info');
 };
 
 const onSliderInput = () => {
@@ -93,7 +93,7 @@ const onSliderChange = () => {
   if (isUserInteracting.value) {
     isUserInteracting.value = false;
     sendCommand('freq', Number(localFreq.value));
-    // showToast(`Frequência ajustada para ${localFreq.value} Hz`, 'info');
+    showToast(`Frequência ajustada para ${localFreq.value} Hz`, 'info');
   }
 };
 
