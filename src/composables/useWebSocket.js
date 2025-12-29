@@ -124,8 +124,10 @@ export function useWebSocket() {
             protocol = 'ws://'
         }
     }
-    
-    return `${protocol}${cleanHost}:${port}/api/ws/inversor`
+
+    const url = `${protocol}${cleanHost}:${port}/api/ws/inversor`
+    console.log(`🔗 Gerando URL WebSocket: ${url} (SSL Configurado: ${serverConfig.value.useSSL}, Protocolo Final: ${protocol})`)
+    return url
   }
 
   const setActiveInverter = (id) => {
