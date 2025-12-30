@@ -1,22 +1,19 @@
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onUnmounted } from 'vue'
 import { useConfig } from './useConfig'
 import { useToast } from './useToast'
+import WebSocketClient from '@/services/WebSocketClient'
 
 const { serverConfig } = useConfig()
 const { showToast } = useToast()
 
 // Constants
 const CONFIG = {
-  reconnectInterval: 3000,
-  maxReconnectInterval: 30000,
-  reconnectBackoff: 1.5,
   pingInterval: 30000,
-  watchdogTimeout: 20000,
-  heartbeatMaxAge: 45000
+  watchdogTimeout: 20000
 }
 
 // State Global
-const ws = ref(null)
+const wsClient = ref(null)
 const isConnected = ref(false)
 const isGatewayOnline = ref(false) // New global gateway status
 const reconnectAttempts = ref(0)
@@ -98,10 +95,8 @@ const latency = computed(() => currentState.value.latency)
   })
 
 // Timers
-let reconnectTimer = null
 let pingTimer = null
 let watchdogTimer = null
-let currentReconnectInterval = CONFIG.reconnectInterval
 
 export function useWebSocket() {
   
@@ -405,51 +400,27 @@ export function useWebSocket() {
 
   const connect = () => {
     // Prevent multiple connections
-    if (ws.value) {
-      if (ws.value.readyState === WebSocket.CONNECTING || ws.value.readyState === WebSocket.OPEN) {
-        return
-      }
-      // Explicitly close dead connection before creating new one
-      try {
-        ws.value.close()
-      } catch (e) {
-        // ignore
-      }
-      ws.value = null
+    if (wsClient.value && wsClient.value.isConnected) {
+      return
     }
-    
+
     const wsUrl = getWebSocketUrl()
-    console.log(`🔌 Conectando: ${wsUrl}`)
-    addLog(`Conectando... (tentativa ${reconnectAttempts.value + 1})`, "info")
     
-    try {
-      ws.value = new WebSocket(wsUrl)
+    wsClient.value = new WebSocketClient(wsUrl, {
+      autoReconnect: true,
+      reconnectDelay: 3000,
       
-      ws.value.onopen = () => {
-        console.log("✅ WebSocket conectado!")
+      onConnected: () => {
         reconnectAttempts.value = 0
-        currentReconnectInterval = CONFIG.reconnectInterval
         isConnected.value = true
         addLog("Conectado ao Node-RED!", "success")
         hideAlert()
-        
-        if (reconnectTimer) {
-          clearTimeout(reconnectTimer)
-          reconnectTimer = null
-        }
-        
         startPingPong()
         startWatchdog()
-      }
+      },
       
-      ws.value.onclose = (event) => {
-        console.log("❌ WebSocket desconectado", event.code)
-        ws.value = null
+      onDisconnected: (event) => {
         isConnected.value = false
-        
-        // Mark all as offline? Or just global status
-        // We'll keep per-inverter state as is but maybe mark them as possibly stale?
-        
         stopPingPong()
         stopWatchdog()
         
@@ -459,90 +430,62 @@ export function useWebSocket() {
           addLog("Conexão perdida - reconectando...", "error")
           showAlert("Conexão perdida - tentando reconectar...", "error")
         }
-        
-        scheduleReconnect()
-      }
+      },
       
-      ws.value.onerror = (error) => {
-        console.error("❌ Erro WebSocket:", error)
+      onReconnecting: (attempt) => {
+        reconnectAttempts.value = attempt
+        addLog(`Reconectando... (tentativa ${attempt})`, "warning")
+      },
+      
+      onError: (error) => {
         addLog("Erro de conexão", "error")
-      }
+      },
       
-      ws.value.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          handleMessage(data)
-          resetWatchdog()
-        } catch (error) {
-          console.error("❌ Erro ao processar mensagem:", error)
-        }
+      onMessage: (data) => {
+        handleMessage(data)
+        resetWatchdog()
       }
-      
-    } catch (error) {
-      console.error("❌ Erro ao criar WebSocket:", error)
-      addLog("Erro ao conectar: " + error.message, "error")
-      scheduleReconnect()
-    }
-  }
-
-  const scheduleReconnect = () => {
-    if (reconnectTimer) return
+    })
     
-    reconnectAttempts.value++
-    
-    currentReconnectInterval = Math.min(
-      CONFIG.reconnectInterval * Math.pow(CONFIG.reconnectBackoff, reconnectAttempts.value - 1),
-      CONFIG.maxReconnectInterval
-    )
-    
-    const seconds = Math.round(currentReconnectInterval / 1000)
-    console.log(`🔄 Reconectando em ${seconds}s...`)
-    addLog(`Próxima tentativa em ${seconds}s`, "warning")
-    
-    reconnectTimer = setTimeout(() => {
-      reconnectTimer = null
-      connect()
-    }, currentReconnectInterval)
+    wsClient.value.connect()
   }
 
   const disconnect = () => {
-    if (ws.value) {
-      ws.value.close()
+    if (wsClient.value) {
+      wsClient.value.disconnect()
     }
   }
 
   const sendCommand = (cmd, value = null) => {
-    // Check if WS is open
-    if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
-      console.warn("⚠️ WebSocket não está pronto. Tentando reconectar...")
-      addLog("Erro: Desconectado. Tentando reconectar...", "error")
-      // Force immediate reconnect attempt
-      connect()
+    if (!wsClient.value || !wsClient.value.isConnected) {
+      console.warn("⚠️ WebSocket não está pronto.")
+      addLog("Erro: Desconectado.", "error")
       return false
     }
 
-    // Check buffer size to prevent freeze
-    if (ws.value.bufferedAmount > 10240) { // 10KB buffered
+    // Check buffer size (direct access to underlying WS if needed, or via client method)
+    // Assuming client handles basic sending. 
+    // If we need buffer check, we might need to expose it in WebSocketClient or access wsClient.value.ws
+    if (wsClient.value.ws && wsClient.value.ws.bufferedAmount > 10240) {
        console.warn("⚠️ Buffer cheio, comando descartado")
        addLog("Rede lenta - comando descartado", "warning")
        return false
     }
     
-    const state = ensureInverterState(activeInverterId.value) // Ensure state exists
+    const state = ensureInverterState(activeInverterId.value)
     
-    // Optimistic Update: Update UI immediately
+    // Optimistic Update
     if (cmd === 'start') {
       state.isRunning = true
       state.rodando = true
       state.systemState = "Inversor Online"
-      state.ignoreUpdatesUntil = Date.now() + 1500 // Ignore server echo for 1.5s
+      state.ignoreUpdatesUntil = Date.now() + 1500 
     } else if (cmd === 'stop') {
       state.isRunning = false
       state.rodando = false
       state.systemState = "Inversor Parado"
       state.ignoreUpdatesUntil = Date.now() + 1500
     } else if (cmd === 'direcao') {
-      // Toggle locally for instant feedback
       const newDir = state.direcao === 'frente' ? 'tras' : 'frente'
       state.direcao = newDir
       state.direction = newDir === 'frente' ? 'Frente' : 'Reverso'
@@ -552,34 +495,32 @@ export function useWebSocket() {
       state.frequencia_setpoint = Number(value)
     }
 
-    // Include ID in the message for backend routing
-    // Node-RED expects 'inv', 'cmd', 'value'
     const message = {
       cmd,
       inv: activeInverterId.value,
       ...(value !== null ? { value } : {})
     }
     
-    try {
-      ws.value.send(JSON.stringify(message))
-      return true
-    } catch (error) {
-      console.error("Erro ao enviar:", error)
+    const sent = wsClient.value.send(message)
+    if (!sent) {
       addLog("Falha ao enviar comando", "error")
-      return false
     }
+    return sent
   }
 
   // Heartbeat check interval
   setInterval(() => {
-    // Aggressive ping to keep connection alive and detect failures fast
-    if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-      ws.value.send(JSON.stringify({ cmd: 'ping', timestamp: Date.now() }))
-    } else if (ws.value && ws.value.readyState === WebSocket.CLOSED) {
-      // If closed but not detected by onclose logic yet
-      connect()
+    // Aggressive ping to keep connection alive
+    if (wsClient.value && wsClient.value.isConnected) {
+       wsClient.value.send({ cmd: 'ping', timestamp: Date.now() })
     }
-  }, 5000) // 5 seconds interval for fast failure detection
+  }, 5000)
+
+  // Cleanup on unmount
+  onUnmounted(() => {
+    disconnect()
+  })
+
 
   return {
     connect,
