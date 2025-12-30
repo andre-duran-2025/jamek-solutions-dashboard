@@ -272,10 +272,10 @@ export function useWebSocket() {
       return
     }
 
-    // 3. Handle Gateway Status
-    if (data.tipo === 'gateway_status') {
+    // 3. Handle Gateway Status / Heartbeat
+    if (data.tipo === 'gateway_status' || data.tipo === 'heartbeat') {
       // Global system state
-      const isOnline = data.online
+      const isOnline = data.status === 'online' || data.online === true
       isGatewayOnline.value = isOnline // Update global gateway status
       
       // Update active inverter system state
@@ -283,6 +283,9 @@ export function useWebSocket() {
       activeState.systemState = isOnline ? "Gateway Online" : "Gateway Offline"
       
       if (data.uptime) activeState.uptime = data.uptime
+      
+      // Handle extra fields from new flow
+      if (data.gateway) console.log(`📡 Gateway: ${data.gateway} (${data.cliente})`)
       
       if (!isOnline) {
         showAlert("Sistema Offline", "error")
