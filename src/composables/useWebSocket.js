@@ -125,7 +125,10 @@ export function useWebSocket() {
         }
     }
 
-    const url = `${protocol}${cleanHost}:${port}/api/ws/inversor`
+    // For standard HTTPS ports (443) or implicit SSL, we might want to omit the port if cleaner
+    const portSuffix = (port === 443 || port === 80) ? '' : `:${port}`
+
+    const url = `${protocol}${cleanHost}${portSuffix}/api/ws/inversor`
     console.log(`🔗 Gerando URL WebSocket: ${url} (SSL Configurado: ${serverConfig.value.useSSL}, Protocolo Final: ${protocol})`)
     return url
   }

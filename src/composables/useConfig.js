@@ -1,16 +1,16 @@
 import { ref, watch } from 'vue'
 
 const defaultConfig = {
-  host: "192.168.2.24",
-  port: 1880,
-  useSSL: false
+  host: "painel.jamek.com.br",
+  port: 443,
+  useSSL: true
 }
 
 const serverConfig = ref({ ...defaultConfig })
 
 export function useConfig() {
   const loadConfig = () => {
-    const saved = localStorage.getItem('jamek_config_v3')
+    const saved = localStorage.getItem('jamek_config_v4')
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
@@ -24,7 +24,7 @@ export function useConfig() {
 
   const saveConfig = (newConfig) => {
     serverConfig.value = { ...newConfig }
-    localStorage.setItem('jamek_config_v3', JSON.stringify(serverConfig.value))
+    localStorage.setItem('jamek_config_v4', JSON.stringify(serverConfig.value))
   }
 
   // Load immediately
