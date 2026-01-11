@@ -75,6 +75,16 @@ const saveConfig = () => {
           >
         </div>
 
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-muted-foreground">Caminho (Path)</label>
+          <input 
+            type="text" 
+            v-model="form.path" 
+            placeholder="/api/ws/gateway"
+            class="w-full h-10 px-3 rounded-md bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-input"
+          >
+        </div>
+
         <div class="flex items-center gap-3 py-2">
           <input 
             type="checkbox" 
