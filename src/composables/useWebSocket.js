@@ -499,8 +499,12 @@ export function useWebSocket() {
     const message = {
       cmd,
       inv: activeInverterId.value,
+      id: activeInverterId.value,
+      inversor: activeInverterId.value,
       ...(value !== null ? { value } : {})
     }
+    
+    console.log(`📤 Enviando comando para Inversor ${activeInverterId.value}:`, message)
     
     const sent = wsClient.value.send(message)
     if (!sent) {
