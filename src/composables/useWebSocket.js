@@ -409,7 +409,7 @@ export function useWebSocket() {
     
     wsClient.value = new WebSocketClient(wsUrl, {
       autoReconnect: true,
-      reconnectDelay: 3000,
+      reconnectDelay: 2000,
       
       onConnected: () => {
         reconnectAttempts.value = 0

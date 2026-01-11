@@ -60,6 +60,8 @@ class WebSocketClient {
       this.ws.onerror = (error) => { 
         console.error('WebSocket erro:', error); 
         this.onError(error); 
+        // Ensure socket is closed on error to trigger reconnect logic
+        if (this.ws) this.ws.close();
       }; 
 
       this.ws.onclose = (event) => { 
