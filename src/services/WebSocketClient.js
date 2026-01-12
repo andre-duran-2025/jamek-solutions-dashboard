@@ -6,7 +6,8 @@ class WebSocketClient {
     this.url = url; 
     this.ws = null; 
     this.reconnectInterval = null; 
-    this.reconnectDelay = options.reconnectDelay || 5000; 
+    this.reconnectDelay = options.reconnectDelay || 2000; 
+    this.maxReconnectDelay = 30000; // Máximo de 30s
     this.autoReconnect = options.autoReconnect !== false; 
     this.maxReconnectAttempts = options.maxReconnectAttempts || Infinity; 
     this.reconnectAttempts = 0; 
@@ -101,10 +102,16 @@ class WebSocketClient {
   // Desconectar 
   disconnect() { 
     this.autoReconnect = false; 
-    clearInterval(this.reconnectInterval); 
-    this.reconnectInterval = null; 
+    
+    if (this.reconnectInterval) {
+      clearTimeout(this.reconnectInterval);
+      this.reconnectInterval = null; 
+    }
 
     if (this.ws) { 
+      // Evita disparar onclose novamente
+      this.ws.onclose = null; 
+      this.ws.onerror = null;
       this.ws.close(); 
       this.ws = null; 
     } 
