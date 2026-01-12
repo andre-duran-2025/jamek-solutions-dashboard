@@ -198,9 +198,10 @@ export function useWebSocket() {
   const startPingPong = () => {
     stopPingPong()
     pingTimer = setInterval(() => {
-      if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+      // Usar wsClient.value.send se disponível, ou verificar se o socket interno existe
+      if (wsClient.value && wsClient.value.isConnected) {
         try {
-          ws.value.send(JSON.stringify({ cmd: 'ping', timestamp: Date.now() }))
+           wsClient.value.send({ cmd: 'ping', timestamp: Date.now() })
         } catch (e) {
           console.error("Erro ao enviar ping:", e)
         }
