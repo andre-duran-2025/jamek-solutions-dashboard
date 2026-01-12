@@ -1,0 +1,340 @@
+[
+    {
+        "id": "f6f2187d.f17ca8",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "3ecee606c27e2fce",
+        "type": "function",
+        "z": "f6f2187d.f17ca8",
+        "name": "function 1",
+        "func": "msg.payload = {\n  tag: \"N12:0\",\n  value: msg.payload[0]\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 120,
+        "wires": [
+            [
+                "47ebfeb0af02fefc"
+            ]
+        ]
+    },
+    {
+        "id": "47ebfeb0af02fefc",
+        "type": "websocket out",
+        "z": "f6f2187d.f17ca8",
+        "name": "CLP_WS",
+        "server": "71c3c3ed0afb275e",
+        "client": "",
+        "x": 810,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "93bc5a88a15c2240",
+        "type": "websocket in",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "server": "71c3c3ed0afb275e",
+        "client": "",
+        "x": 140,
+        "y": 260,
+        "wires": [
+            [
+                "110dfeeb29271070"
+            ]
+        ]
+    },
+    {
+        "id": "110dfeeb29271070",
+        "type": "function",
+        "z": "f6f2187d.f17ca8",
+        "name": "function 2",
+        "func": "// Se vier como string JSON\nif (typeof msg.payload === \"string\") {\n    msg.payload = JSON.parse(msg.payload);\n}\n\n// Conversão de comando\nif (msg.payload.cmd === \"ligar\") {\n    msg.payload = 6;\n}\nelse if (msg.payload.cmd === \"desligar\") {\n    msg.payload = 1;\n}\nelse {\n    return null; // ignora comandos inválidos\n}\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 260,
+        "wires": [
+            [
+                "09921a0f0bd3ee7a"
+            ]
+        ]
+    },
+    {
+        "id": "2f2a4da8f3a54dee",
+        "type": "websocket in",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "server": "71c3c3ed0afb275e",
+        "client": "",
+        "x": 140,
+        "y": 420,
+        "wires": [
+            [
+                "e559488ac14eef8e"
+            ]
+        ]
+    },
+    {
+        "id": "e559488ac14eef8e",
+        "type": "function",
+        "z": "f6f2187d.f17ca8",
+        "name": "function 3",
+        "func": "// Se vier como string, converte para JSON\nif (typeof msg.payload === \"string\") {\n    msg.payload = JSON.parse(msg.payload);\n}\n\n// Espera { speed: 0-600 }\nif (msg.payload.speed !== undefined) {\n    let v = Number(msg.payload.speed);\n\n    // Limita a faixa\n    if (v < 0) v = 0;\n    if (v > 600) v = 600;\n\n    msg.payload = v;\n    return msg;\n}\n\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 420,
+        "wires": [
+            [
+                "a7ffcd6b79bcd0c7"
+            ]
+        ]
+    },
+    {
+        "id": "48816eb07572a7ad",
+        "type": "function",
+        "z": "f6f2187d.f17ca8",
+        "name": "function 4",
+        "func": "msg.payload = {\n  tag: \"N12:1\",\n  value: msg.payload[0]\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 520,
+        "wires": [
+            [
+                "a15be2463ebe64ce"
+            ]
+        ]
+    },
+    {
+        "id": "a15be2463ebe64ce",
+        "type": "websocket out",
+        "z": "f6f2187d.f17ca8",
+        "name": "CLP_WS",
+        "server": "71c3c3ed0afb275e",
+        "client": "",
+        "x": 790,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "7ec777ee788aee84",
+        "type": "modbus-read",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "",
+        "showStatusActivities": false,
+        "logIOActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "unitid": "",
+        "dataType": "HoldingRegister",
+        "adr": "0",
+        "quantity": "1",
+        "rate": "200",
+        "rateUnit": "ms",
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "server": "f9f1bc8388ae9993",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "x": 150,
+        "y": 100,
+        "wires": [
+            [
+                "3ecee606c27e2fce"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "67844db73d4a3c85",
+        "type": "modbus-read",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "",
+        "showStatusActivities": false,
+        "logIOActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "unitid": "",
+        "dataType": "HoldingRegister",
+        "adr": "1",
+        "quantity": "1",
+        "rate": "200",
+        "rateUnit": "ms",
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "server": "f9f1bc8388ae9993",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "x": 160,
+        "y": 520,
+        "wires": [
+            [
+                "48816eb07572a7ad"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "09921a0f0bd3ee7a",
+        "type": "modbus-write",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "unitid": "",
+        "dataType": "HoldingRegister",
+        "adr": "0",
+        "quantity": "1",
+        "server": "f9f1bc8388ae9993",
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": false,
+        "delayOnStart": false,
+        "startDelayTime": "",
+        "x": 850,
+        "y": 260,
+        "wires": [
+            [],
+            []
+        ]
+    },
+    {
+        "id": "a7ffcd6b79bcd0c7",
+        "type": "modbus-write",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "unitid": "",
+        "dataType": "HoldingRegister",
+        "adr": "1",
+        "quantity": "1",
+        "server": "f9f1bc8388ae9993",
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": false,
+        "delayOnStart": false,
+        "startDelayTime": "",
+        "x": 790,
+        "y": 420,
+        "wires": [
+            [],
+            []
+        ]
+    },
+    {
+        "id": "60342d916cc1fea4",
+        "type": "inject",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "3",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 190,
+        "y": 180,
+        "wires": [
+            [
+                "ab533e201fa91864"
+            ]
+        ]
+    },
+    {
+        "id": "ab533e201fa91864",
+        "type": "function",
+        "z": "f6f2187d.f17ca8",
+        "name": "function 5",
+        "func": "msg.payload = { ping: true };\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 496.1999816894531,
+        "y": 174.1999969482422,
+        "wires": [
+            [
+                "47ebfeb0af02fefc"
+            ]
+        ]
+    },
+    {
+        "id": "71c3c3ed0afb275e",
+        "type": "websocket-listener",
+        "path": "/ws/clp",
+        "wholemsg": "false"
+    },
+    {
+        "id": "f9f1bc8388ae9993",
+        "type": "modbus-client",
+        "name": "",
+        "clienttype": "tcp",
+        "bufferCommands": true,
+        "stateLogEnabled": false,
+        "queueLogEnabled": false,
+        "failureLogEnabled": true,
+        "tcpHost": "192.168.1.35",
+        "tcpPort": 502,
+        "tcpType": "DEFAULT",
+        "serialPort": "/dev/ttyUSB",
+        "serialType": "RTU-BUFFERD",
+        "serialBaudrate": 9600,
+        "serialDatabits": 8,
+        "serialStopbits": 1,
+        "serialParity": "none",
+        "serialConnectionDelay": 100,
+        "serialAsciiResponseStartDelimiter": "0x3A",
+        "unit_id": 1,
+        "commandDelay": 1,
+        "clientTimeout": 1000,
+        "reconnectOnTimeout": true,
+        "reconnectTimeout": 2000,
+        "parallelUnitIdsAllowed": true,
+        "showErrors": false,
+        "showWarnings": true,
+        "showLogs": true
+    }
+]

@@ -496,12 +496,39 @@ export function useWebSocket() {
       state.frequencia_setpoint = Number(value)
     }
 
-    const message = {
-      cmd,
-      inv: activeInverterId.value,
-      id: activeInverterId.value,
-      inversor: activeInverterId.value,
-      ...(value !== null ? { value } : {})
+    let message = {}
+
+    // Node-RED Flow Compatibility Adapter
+    if (cmd === 'start') {
+      message = { cmd: 'ligar' }
+      // Optimistic
+      state.isRunning = true
+      state.systemState = "Enviando comando..."
+    } 
+    else if (cmd === 'stop') {
+      message = { cmd: 'desligar' }
+      // Optimistic
+      state.isRunning = false
+      state.systemState = "Enviando comando..."
+    }
+    else if (cmd === 'freq' && value !== null) {
+      // Scale: 0-60Hz -> 0-600
+      let speed = Math.round(Number(value) * 10)
+      if (speed < 0) speed = 0
+      if (speed > 600) speed = 600
+      message = { speed: speed }
+      
+      state.setpointFreq = Number(value)
+    }
+    else {
+      // Fallback for other commands
+      message = {
+        cmd,
+        inv: activeInverterId.value,
+        id: activeInverterId.value,
+        inversor: activeInverterId.value,
+        ...(value !== null ? { value } : {})
+      }
     }
     
     console.log(`📤 Enviando comando para Inversor ${activeInverterId.value}:`, message)
