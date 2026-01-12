@@ -459,9 +459,21 @@ export function useWebSocket() {
   }
 
   const sendCommand = (cmd, value = null) => {
+    // Debug state before check
+    if (wsClient.value) {
+        console.log(`🔍 [DEBUG] sendCommand check: Client exists. Connected: ${wsClient.value.isConnected}`)
+    } else {
+        console.log(`🔍 [DEBUG] sendCommand check: Client is NULL`)
+    }
+
     if (!wsClient.value || !wsClient.value.isConnected) {
       console.warn("⚠️ WebSocket não está pronto.")
       addLog("Erro: Desconectado.", "error")
+      // Tentativa de reconexão de emergência
+      if (wsClient.value && !wsClient.value.isConnecting) {
+         console.log("🔄 Tentando reconectar de emergência...")
+         wsClient.value.connect()
+      }
       return false
     }
 
@@ -474,71 +486,80 @@ export function useWebSocket() {
        return false
     }
     
-    const state = ensureInverterState(activeInverterId.value)
-    
-    // Optimistic Update
-    if (cmd === 'start') {
-      state.isRunning = true
-      state.rodando = true
-      state.systemState = "Inversor Online"
-      state.ignoreUpdatesUntil = Date.now() + 1500 
-    } else if (cmd === 'stop') {
-      state.isRunning = false
-      state.rodando = false
-      state.systemState = "Inversor Parado"
-      state.ignoreUpdatesUntil = Date.now() + 1500
-    } else if (cmd === 'direcao') {
-      const newDir = state.direcao === 'frente' ? 'tras' : 'frente'
-      state.direcao = newDir
-      state.direction = newDir === 'frente' ? 'Frente' : 'Reverso'
-      state.ignoreUpdatesUntil = Date.now() + 1500
-    } else if (cmd === 'freq' && value !== null) {
-      state.setpointFreq = Number(value)
-      state.frequencia_setpoint = Number(value)
-    }
+    try {
+        const state = ensureInverterState(activeInverterId.value)
+        
+        // Optimistic Update
+        if (cmd === 'start') {
+          state.isRunning = true
+          state.rodando = true
+          state.systemState = "Inversor Online"
+          state.ignoreUpdatesUntil = Date.now() + 1500 
+        } else if (cmd === 'stop') {
+          state.isRunning = false
+          state.rodando = false
+          state.systemState = "Inversor Parado"
+          state.ignoreUpdatesUntil = Date.now() + 1500
+        } else if (cmd === 'direcao') {
+          const newDir = state.direcao === 'frente' ? 'tras' : 'frente'
+          state.direcao = newDir
+          state.direction = newDir === 'frente' ? 'Frente' : 'Reverso'
+          state.ignoreUpdatesUntil = Date.now() + 1500
+        } else if (cmd === 'freq' && value !== null) {
+          state.setpointFreq = Number(value)
+          state.frequencia_setpoint = Number(value)
+        }
 
-    let message = {}
+        let message = {}
 
-    // Node-RED Flow Compatibility Adapter
-    if (cmd === 'start') {
-      message = { cmd: 'ligar' }
-      // Optimistic
-      state.isRunning = true
-      state.systemState = "Enviando comando..."
-    } 
-    else if (cmd === 'stop') {
-      message = { cmd: 'desligar' }
-      // Optimistic
-      state.isRunning = false
-      state.systemState = "Enviando comando..."
+        // Node-RED Flow Compatibility Adapter
+        if (cmd === 'start') {
+          message = { cmd: 'ligar' }
+          // Optimistic
+          state.isRunning = true
+          state.systemState = "Enviando comando..."
+        } 
+        else if (cmd === 'stop') {
+          message = { cmd: 'desligar' }
+          // Optimistic
+          state.isRunning = false
+          state.systemState = "Enviando comando..."
+        }
+        else if (cmd === 'freq' && value !== null) {
+          // Scale: 0-60Hz -> 0-600
+          let speed = Math.round(Number(value) * 10)
+          if (speed < 0) speed = 0
+          if (speed > 600) speed = 600
+          message = { speed: speed }
+          
+          state.setpointFreq = Number(value)
+        }
+        else {
+          // Fallback for other commands
+          message = {
+            cmd,
+            inv: activeInverterId.value,
+            id: activeInverterId.value,
+            inversor: activeInverterId.value,
+            ...(value !== null ? { value } : {})
+          }
+        }
+        
+        console.log(`📤 Enviando comando para Inversor ${activeInverterId.value}:`, message)
+        
+        const sent = wsClient.value.send(message)
+        if (!sent) {
+          addLog("Falha ao enviar comando", "error")
+          console.error("❌ Falha no envio (wsClient.send retornou false)")
+        } else {
+          console.log("✅ Comando enviado com sucesso (bufferizado)")
+        }
+        return sent
+    } catch (e) {
+        console.error("🔥 Erro crítico em sendCommand:", e)
+        addLog("Erro interno ao enviar", "error")
+        return false
     }
-    else if (cmd === 'freq' && value !== null) {
-      // Scale: 0-60Hz -> 0-600
-      let speed = Math.round(Number(value) * 10)
-      if (speed < 0) speed = 0
-      if (speed > 600) speed = 600
-      message = { speed: speed }
-      
-      state.setpointFreq = Number(value)
-    }
-    else {
-      // Fallback for other commands
-      message = {
-        cmd,
-        inv: activeInverterId.value,
-        id: activeInverterId.value,
-        inversor: activeInverterId.value,
-        ...(value !== null ? { value } : {})
-      }
-    }
-    
-    console.log(`📤 Enviando comando para Inversor ${activeInverterId.value}:`, message)
-    
-    const sent = wsClient.value.send(message)
-    if (!sent) {
-      addLog("Falha ao enviar comando", "error")
-    }
-    return sent
   }
 
   // Heartbeat check interval
