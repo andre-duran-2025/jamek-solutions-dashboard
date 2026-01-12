@@ -258,14 +258,12 @@ const emit = defineEmits(['open-config']);
                 :icon="Play"
                 variant="start"
                 @click="handleStart"
-                :disabled="!isConnected"
               />
               <ControlButton
                 label="Parar"
                 :icon="Square"
                 variant="stop"
                 @click="handleStop"
-                :disabled="!isConnected"
               />
             </div>
             
@@ -274,7 +272,6 @@ const emit = defineEmits(['open-config']);
               :icon="ArrowRightLeft"
               variant="default"
               @click="handleDirection"
-              :disabled="!isConnected"
             />
             
             <ControlButton
@@ -282,7 +279,6 @@ const emit = defineEmits(['open-config']);
               :icon="RotateCcw"
               variant="reset"
               @click="handleReset"
-              :disabled="!isConnected"
             />
           </div>
         </section>
@@ -306,8 +302,15 @@ const emit = defineEmits(['open-config']);
             <div class="flex items-center justify-between py-2">
               <span class="text-muted-foreground">Conexão</span>
               <span class="flex items-center gap-2 text-sm">
-                <span class="w-2 h-2 rounded-full" :class="isConnected ? 'bg-success' : 'bg-destructive'"></span>
+                <span class="w-2 h-2 rounded-full" :class="isConnected ? 'bg-success' : 'bg-destructive animate-pulse'"></span>
                 {{ isConnected ? 'Conectado' : 'Desconectado' }}
+                <button 
+                   v-if="!isConnected" 
+                   @click="connect"
+                   class="ml-2 text-xs bg-primary px-2 py-0.5 rounded text-white hover:bg-primary/90"
+                >
+                   Reconectar
+                </button>
               </span>
             </div>
           </div>
